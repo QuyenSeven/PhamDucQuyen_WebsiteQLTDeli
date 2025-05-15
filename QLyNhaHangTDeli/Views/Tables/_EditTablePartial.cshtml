@@ -1,0 +1,37 @@
+﻿@model QLyNhaHangTDeli.Models.Table
+
+<form id="editTableForm">
+    <input type="hidden" name="TableID" value="@Model.TableID" />
+    <div class="mb-4">
+        <label class="font-semibold">Tên bàn</label>
+        <input type="text" name="TableName" value="@Model.TableName" class="w-full border rounded p-2" />
+    </div>
+   
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Lưu</button>
+</form>
+<script>
+    $(document).on('submit', '#editTableForm', function (e) {
+        e.preventDefault();
+
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/Tables/Edit', // POST action
+            type: 'POST',
+            data: formData,
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire("Thành công", res.message, "success").then(() => {
+                        $('#boxModal').addClass('hidden'); // Ẩn modal
+                        location.reload(); // Hoặc chỉ reload danh sách bàn bằng Ajax nếu muốn
+                    });
+                } else {
+                    Swal.fire("Lỗi", res.message, "error");
+                }
+            },
+            error: function () {
+                Swal.fire("Lỗi", "Đã xảy ra lỗi khi cập nhật.", "error");
+            }
+        });
+    });
+</script>

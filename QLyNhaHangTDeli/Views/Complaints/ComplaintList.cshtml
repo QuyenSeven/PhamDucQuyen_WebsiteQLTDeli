@@ -1,0 +1,67 @@
+﻿@model List<QLyNhaHangTDeli.Models.Complaint>
+@{
+    var pagination = (QLyNhaHangTDeli.Models.PaginationModel)ViewBag.Pagination;
+    ViewBag.Title = "Đơn khiếu lại";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="w-full flex flex-col h-full">
+    <div class="mb-4 flex gap-2">
+        <input type="text" id="search-subject" class="border rounded text-sm px-2 py-1" placeholder="Tìm kiếm">
+        <input type="date" id="filter-date" class="border rounded text-sm px-2 py-1">
+        <select id="filter-status" class="border rounded text-sm px-2 py-1 bg-white">
+            <option value="">Tất cả</option>
+            <option value="Đã xử lý">Đã xử lý</option>
+            <option value="Chưa xử lý">Chưa xử lý</option>
+        </select>
+        <button id="sort-date" data-sort="date_asc" class="border rounded text-sm px-2 py-1">
+            Sắp xếp ↑↓
+        </button>
+    </div>
+
+    <div id="complaint-container">
+        @Html.Partial("_ComPlaintListPartial", Model)
+    </div>
+</div>
+<script>
+      function loadComplaints(page = 1) {
+      var subject = $('#search-subject').val();
+      var date = $('#filter-date').val();
+      var status = $('#filter-status').val();
+          var sort = $('#sort-date').data('sort');
+
+      $.ajax({
+          url: '@Url.Action("ComplaintList", "Complaints")',
+          type: 'GET',
+          data: {
+              subject: subject,
+              date: date,
+              status: status,
+              sortOrder: sort,
+              page: page
+          },
+          success: function (response) {
+              $('#complaint-container').html(response);
+          }
+      });
+  }
+
+  // Trigger lọc
+    $('#search-subject, #filter-date, #filter-status').on('change keyup', function () {
+        loadComplaints(1);
+  });
+
+  // Sort
+  $('#sort-date').click(function () {
+      var sort = $(this).data('sort') === 'date_asc' ? 'date_desc' : 'date_asc';
+      $(this).data('sort', sort);
+      loadComplaints(1);
+  });
+
+  // Phân trang
+  $(document).on('click', '.pagination-link', function (e) {
+      e.preventDefault();
+      var page = $(this).data('page');
+      loadComplaints(page);
+  });
+</script>

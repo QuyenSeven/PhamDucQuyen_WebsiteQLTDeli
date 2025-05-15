@@ -1,0 +1,109 @@
+﻿@model QLyNhaHangTDeli.Models.ForgotResetPasswordViewModel
+
+<h2 class="text-center text-gray-700 text-lg md:text-xl mb-4">Enter OTP  @( Session["OTP"])</h2>
+
+
+@using (Html.BeginForm("VerifyOTP", "Users", FormMethod.Post))
+{
+
+    <div class="flex justify-center space-x-2 m-4">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+        <input type="text" maxlength="1" class="w-10 h-10 md:w-12 md:h-12 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 otp-input">
+    </div>
+
+
+
+
+    @Html.ValidationMessageFor(model => model.OTP, "", new { @class = "" })
+    <button type="button" id="verifyOtpBtn" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600">Xác nhận OTP</button>
+}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+
+        setTimeout(function () {
+            $(".otp-input:first").focus();
+        }, 200); 
+        //var actionType = "";
+        $(".otp-input").on("input", function () {
+            if (this.value.length == 1) {
+                let nextInput = $(this).next(".otp-input");
+                //console.log("Next input:", nextInput); // Debug kiểm tra ô tiếp theo
+                if (nextInput.length) {
+                    nextInput.focus();
+                }
+            }
+        });
+
+
+        // Chuyển lại ô trước đó khi người dùng xóa
+        $(".otp-input").on("keydown", function (e) {
+            if (e.key === "Backspace" && $(this).val() === "") {
+                $(this).prev(".otp-input").focus().val(""); // Xóa ký tự ở ô trước
+            }
+        });
+
+        $("#verifyOtpBtn").click(function (event) {
+            event.preventDefault();
+            var otp = "";
+            $(".otp-input").each(function () {
+                otp += $(this).val();  // Kết hợp tất cả các giá trị của ô nhập thành một chuỗi
+            });
+
+            // Kiểm tra nếu OTP đủ 6 ký tự
+            if (otp.length !== 6) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Thiếu mã OTP!",
+                    text: "Vui lòng nhập đầy đủ 6 chữ số OTP.",
+                    confirmButtonText: "OK"
+                });
+                return;
+            }
+
+            $.ajax({
+                url: "@Url.Action("VerifyOTP", "Users")",  // Thay đổi đường dẫn đến controller của bạn
+                type: "POST",
+                data: { otp: otp },
+                dataType: "json",
+                success: function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Xác nhận thành công!",
+                            text: "OTP hợp lệ, bạn có thể tiếp tục.",
+                            timer: 1000, // Tự động đóng sau 2 giây
+                            showConfirmButton: false
+                        }).then(() => {
+                            if (response.redirectUrl) {
+                                window.location.href = response.redirectUrl; // Chuyển hướng nếu có URL
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Lỗi OTP!",
+                            text: response.message,
+                            confirmButtonText: "OK"
+                        });
+                    }
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Lỗi hệ thống!",
+                        text: "Có lỗi xảy ra, vui lòng thử lại.",
+                        confirmButtonText: "OK"
+                    });
+                }
+            });
+        });
+
+    });
+
+</script>

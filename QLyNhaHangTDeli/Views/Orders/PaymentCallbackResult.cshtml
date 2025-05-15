@@ -1,0 +1,38 @@
+﻿@model QLyNhaHangTDeli.Models.JsonView
+
+@{
+    ViewBag.Title = "Thoanh toán";
+    Layout = "~/Views/Shared/_LayoutWeb.cshtml";
+}
+@{
+    string image3Url = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("banner-2", Url);
+}
+<img alt="A person looking through a telescope" class="w-full h-[120px] object-cover" src="@image3Url" />
+<div class="bg-white"></div>
+<script>
+      $(document).ready(function () {
+          var success = @Model.Success.ToLower();
+          console.log(success);
+
+            if (success == true) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thanh toán thành công!',
+                    showConfirmButton: false,
+                   // timer: 2000
+                }).then(() => {
+                    window.location.href = '@Url.Action("MenuView", "Products")';  // Redirect về trang khác nếu cần
+                });
+            } else  {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Thanh toán thất bại!',
+                    showConfirmButton: false,
+                   //timer: 2000
+                }).then(() => {
+                    window.location.href = '@Url.Action("MenuView", "Products")';  // Redirect về trang khác nếu cần
+                });
+            }
+        });
+</script>
+

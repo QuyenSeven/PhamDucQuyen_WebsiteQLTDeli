@@ -1,0 +1,52 @@
+﻿<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>
+        Tdeli
+    </title>
+    @{
+        string imageUrl1 = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("logoIcon", Url);
+    }
+    <link rel="icon" href="@imageUrl1" type="image/png" />
+    <link href="~/Content/tailwind.css" rel="stylesheet" />
+
+    @*<script src="https://cdn.tailwindcss.com"></script>*@
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $("#closeModal").click(function () {
+                $("#boxModal").addClass("hidden"); // Ẩn modal
+            });
+        });
+    </script>
+    <style>
+        img {
+            filter: invert(100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-800 flex items-center justify-center min-h-screen">
+
+    <div id="boxModal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg 
+                w-full  md:w-1/2 md:rounded-xl md:p-4 overflow-y-auto">
+            <div class="flex justify-end">
+                <div id="closeModal" class="px-4 py-2 text-gray-500 rounded-lg cursor-pointer">
+                    <i class="fas fa-times text-xl"></i>
+                </div>
+            </div>
+
+            <!-- Nội dung form sẽ được load bằng Ajax -->
+            <div id="modalContent" class="h-auto  md:h-auto lg:h-auto">
+                <!-- Nội dung động sẽ được chèn vào đây -->
+            </div>
+        </div>
+    </div>
+    @RenderBody()
+</body>
+</html>

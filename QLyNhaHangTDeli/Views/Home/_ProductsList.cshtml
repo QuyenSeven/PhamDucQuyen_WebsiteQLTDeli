@@ -1,0 +1,187 @@
+﻿@model List<QLyNhaHangTDeli.Models.Product>
+
+@if (Model != null && Model.Any())
+{
+    <div id="productList" class="overflow-y-auto invisible-scrollbar">
+        @foreach (var p in Model)
+        {
+            <div class="prdItem relative group border p-3 rounded shadow overflow-hidden flex items-center space-x-4 mb-2" data-id="@p.ProductID">
+                <!-- Ảnh sản phẩm -->
+                @{
+                    var imgUrl = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(p.ImageURL, Url);
+                }
+                @if (!string.IsNullOrEmpty(imgUrl))
+                {
+                    <img src="@imgUrl" alt="@p.ProductName" class="w-24 h-24 object-cover rounded" />
+                }
+                else
+                {
+                    <div class="flex items-center justify-center bg-gray-200 text-gray-500 text-2xl w-24 h-24 rounded">
+                        <i class="fas fa-box"></i>
+                    </div>
+                }
+
+                <!-- Nội dung sản phẩm -->
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg">@p.ProductName</h3>
+                    <p>Giá: @p.Price.ToString("N0")₫</p>
+                </div>
+
+                <!-- Nút giỏ hàng -->
+                <button class="ml-auto text-xl w-10 h-10 rounded-full flex items-center justify-center add-to-cart-btn" data-id="@p.ProductID">
+                    <i class="fas fa-cart-plus"></i>
+                </button>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="text-center text-lg font-semibold text-gray-600 mt-8">
+        Không có sản phẩm nào
+    </div>
+}
+
+<!-- Hiển thị phân trang -->
+<div class="mt-4 flex justify-center items-center space-x-2">
+    <!-- Prev -->
+    <button class="px-3 py-2 border rounded bg-white hover:bg-gray-100 page-link"
+            data-page="@(ViewBag.CurrentPage - 1)"
+            @(ViewBag.CurrentPage == 1 ? "disabled" : "")>
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <!-- Input trang -->
+    <input id="pageInput" type="text" min="1" max="@ViewBag.TotalPages"
+           value="@ViewBag.CurrentPage"
+           class="w-8 px-2 py-1 border rounded text-center" />
+    <span>/ @ViewBag.TotalPages</span>
+
+    <!-- Next -->
+    <button class="px-3 py-2 border rounded bg-white hover:bg-gray-100 page-link"
+            data-page="@(ViewBag.CurrentPage + 1)"
+            @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")>
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+<script>
+    // Hàm chính để gọi Ajax
+    function loadPage(pageNumber) {
+        const keyword = $('#searchInput').val();
+        const category = $('#categorySelect').val();
+        const pageSize = 12;
+
+        $.ajax({
+            url: '/Home/ProductsListHome',
+            type: 'GET',
+            data: {
+                keyword: keyword,
+                category: category,
+                page: pageNumber,
+                pageSize: pageSize
+            },
+            success: function (data) {
+                // Cập nhật chỉ danh sách sản phẩm và phân trang
+                $('#productListContainer').html(data);
+
+            },
+            error: function () {
+                alert('Lỗi khi tải sản phẩm.');
+            }
+        });
+    }
+    let debounceTimer = null;
+    // Khi nhập từ khóa tìm kiếm
+    $(document).on('input', '#searchInput', function () {
+        clearTimeout(debounceTimer);
+
+        debounceTimer = setTimeout(function () {
+            loadPage(1); // Reset về page 1 khi tìm kiếm mới
+        }, 500); // Delay 500ms
+    });
+
+    // Khi chọn danh mục
+    $(document).on('change', '#categorySelect', function () {
+        loadPage(1); // Load lại từ trang đầu khi chọn danh mục thay đổi
+    });
+
+    // Nhấn Enter trong ô nhập số trang
+    $(document).on('keydown', '#pageInput', function (e) {
+        if (e.key === 'Enter') {
+            const page = parseInt($(this).val());
+            const min = parseInt($(this).attr('min'));
+            const max = parseInt($(this).attr('max'));
+
+            if (!isNaN(page) && page >= min && page <= max) {
+                loadPage(page);
+            } else {
+                alert("Số trang không hợp lệ.");
+            }
+        }
+    });
+
+    // Khi click Prev hoặc Next
+    $(document).on('click', '.page-link', function (e) {
+        e.preventDefault();
+        if ($(this).is('[disabled]')) return;
+
+        const page = parseInt($(this).data('page'));
+        if (!isNaN(page)) {
+            loadPage(page);
+        }
+    });
+
+       $(document).on('click', '.add-to-cart-btn', function () {
+        const productId = $(this).data('id');
+        const orderId = $('#orderIdHolder').data('order-id');
+
+        if (!orderId) {
+            Swal.fire("Lỗi", "Không tìm thấy đơn hàng. Vui lòng chọn bàn trước.", "error");
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("AddProductToOrder", "Orders")',
+            type: 'POST',
+            data: {
+                orderId: orderId,
+                productId: productId
+            },
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire({
+                        title: "Thành công",
+                        text: res.message,
+                        icon: "success",
+                        timer: 2000,
+                        showConfirmButton: false,
+                        willClose: () => {
+                           const tableId = $('#orderIdHolder').data('table-id');
+
+                           $.ajax({
+                            url: '@Url.Action("LoadOrderDetails", "Orders")',
+                            type: 'GET',
+                            data: { orderId: orderId },
+                            success: function (html) {
+                                $('#orderIdHolder').parent().html(html); // hoặc replace bằng đoạn HTML mới
+                            },
+                            error: function () {
+                                Swal.fire("Lỗi", "Không thể làm mới chi tiết đơn hàng.", "error");
+                            }
+                        });
+                        }
+                    });
+                    // Có thể reload lại danh sách sản phẩm trong đơn ở đây nếu muốn
+                } else {
+                    Swal.fire("Thông báo", res.message, "warning");
+                }
+            },
+            error: function () {
+                Swal.fire("Lỗi", "Không thể thêm sản phẩm. Vui lòng thử lại.", "error");
+            }
+        });
+       });
+
+
+</script>
+

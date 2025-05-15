@@ -1,0 +1,594 @@
+﻿@model IEnumerable<QLyNhaHangTDeli.Models.DiscountCode>
+@using Newtonsoft.Json
+
+@{
+    ViewBag.Title = "Giảm giá";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+    /* Additional custom styles for smooth toggle transition */
+    .toggle-circle {
+        transition: transform 0.3s ease-in-out;
+    }
+</style>
+<div class="flex flex-col">
+    <div class="flex-1 flex flex-col bg-white text-sm  rounded">
+
+        <!-- Table Head (fixed) -->
+        <div>
+            <table class="w-full table-fixed">
+                <thead class="bg-white">
+                    <tr>
+                        <th class="px-2 py-1 text-left w-[5%] md:table-cell hidden">Kích hoạt</th>
+                        <th class="px-2 py-1 text-left w-[10%] lg:table-cell hidden">Loại</th>
+                        <th class="px-2 py-1 text-left w-[10%]">Mã giảm</th>
+                        <th class="px-2 py-1 text-left w-[10%] md:table-cell hidden sortable" data-sort="DiscountAmount">Giá trị
+                            <span class="sort-icon inline-block ml-1">
+                                <i class="fas fa-sort text-gray-400"></i> <!-- Icon mặc định ban đầu -->
+                            </span>
+                        </th>
+                        <th class="px-2 py-1 text-left w-[10%] lg:table-cell hidden">Cập nhật</th>
+                        <th class="px-2 py-1 text-left w-[10%] md:table-cell hidden">Hết hạn</th>
+                        <th class="px-2 py-1 text-left w-[15%] lg:table-cell hidden">Điều kiện (Min/Max)</th>
+                        <th class="px-2 py-1 text-left w-[5%] lg:table-cell hidden">Công khai</th>
+                        <th class="px-2 py-1 text-left w-[10%]">Số lượng</th>
+                        <th class="px-2 py-1 text-center w-[10%]">
+                            <i id="addRowBtn" class="fas fa-plus cursor-pointer text-green-600 hover:scale-110 transition-transform"></i>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="px-2 py-1 md:table-cell hidden"></th>
+                        <th class="px-2 py-1 lg:table-cell hidden">
+                            <select class="w-full border rounded text-sm filter-select bg-white" data-filter="DiscountType">
+                                <option value="">Tất cả</option>
+                                <option value="Phần trăm">%</option>
+                                <option value="Cố định">VND</option>
+                                <!-- Thêm các loại khác nếu có -->
+                            </select>
+                        </th>
+                        <th class="px-2 py-1"></th>
+                        <th class="px-2 py-1 md:table-cell hidden">
+                            <input type="text" class="w-full border rounded text-sm filter-input" placeholder="Giá trị..." data-filter="DiscountAmount" />
+                        </th>
+                        <th class="px-2 py-1 lg:table-cell hidden">
+                            <input type="date" class="w-full border rounded text-sm filter-input" data-filter="UpdatedAt"/>
+                        </th>
+                        <th class="px-2 py-1 md:table-cell hidden">
+                            <input type="date" class="w-full border rounded text-sm filter-input" data-filter="ExpiryDate" />
+                        </th>
+                        <th class="px-2 py-1 lg:table-cell hidden"></th>
+                        <th class="px-2 py-1 lg:table-cell hidden">
+                            <select class="w-full border rounded text-sm filter-select bg-white" data-filter="IsPublic">
+                                <option value="">all</option>
+                                <option value="true">✔</option>
+                                <option value="false">✘</option>
+                            </select>
+                        </th>
+                        <th class="px-2 py-1"></th>
+                        <th class="px-2 py-1"></th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="overflow-y-auto h-[600px] invisible-scrollbar">
+            <table class="w-full table-fixed">
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="border-t">
+                            <td class="px-2 py-1 md:table-cell hidden w-[5%]">
+                                <div class="toggleWrapper w-10 h-4 flex items-center
+                                     @(item.IsActive.GetValueOrDefault() ? "bg-green-500" : "bg-red-500") rounded-full cursor-pointer">
+                                    <div class="toggleCircle bg-gray-200 w-4 h-4 rounded-full toggle-circle"
+                                         style="transform: @(item.IsActive.GetValueOrDefault() ? "translateX(25px)" : "translateX(0)");"></div>
+                                </div>
+                            </td>
+                            <td data-key="DiscountType" class="px-2 py-1 lg:table-cell hidden w-[10%]">@item.DiscountType</td>
+                            <td  class="px-2 py-1 truncate w-[10%]">@item.Code</td>
+                            <td data-key="DiscountAmount" class="px-2 py-1 md:table-cell hidden w-[10%]" data-sort="DiscountAmount">@item.DiscountAmount.ToString("N0")</td>
+                            <td data-key="UpdatedAt" class="px-2 py-1 lg:table-cell hidden w-[10%]">@(item.UpdatedAt?.ToString("dd/MM/yyyy") ?? "")</td>
+                            <td data-key="ExpiryDate" class="px-2 py-1 md:table-cell hidden w-[10%]">@item.ExpiryDate.ToString("dd/MM/yyyy")</td>
+                            <td class="px-2 py-1 lg:table-cell hidden w-[15%]">@(item.MinimumOrderValue?.ToString("N0") ?? "0")/ @(item.MaxDiscountAmount?.ToString("N0") ?? "0")</td>
+                            <td data-key="IsPublic" class="px-2 py-1 lg:table-cell hidden w-[5%]">@((item.IsPublic == true) ? "✔" : "✘")</td>
+                            <td class="px-2 py-1 w-[10%]">
+                                @if (item.UsageLimit.HasValue)
+                                {
+                                    <span>@(item.UsedCount?? 0) /@item.UsageLimit</span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-infinity"></i>
+                                }
+                            </td>
+                            <td class="px-2 py-1 text-center w-[10%]">
+                                <a href="javascript:void(0)" class="text-blue-600 hover:underline mr-2 btn-inline-edit" title="Sửa"
+                                   data-item='@Html.Raw(JsonConvert.SerializeObject(item, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }))'>
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                @if (item.IsPublic == false)
+                                {
+                                    <a href="javascript:void(0)"
+                                       data-id="@item.DiscountCodeID"
+                                       class="text-green-600 hover:underline mr-2 btn-view-assigned"
+                                       title="Danh sách người được gán mã">
+                                        <i class="fas fa-users"></i>
+                                    </a>
+                                }
+                                <a href="javascript:void(0)"
+                                   data-id="@item.DiscountCodeID"
+                                   class="text-red-600 hover:underline btn-delete-discount"
+                                   title="Xóa">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // jQuery for Toggle Functionality
+    $(document).ready(function () {
+
+
+      // Add row logic
+        $('#addRowBtn').click(function () {
+            const newRow = `
+                <tr class="border-t">
+                    <td class="px-2 py-1 md:table-cell hidden toggle-cell w-[5%]">
+                        <div class="toggleWrapper w-10 h-4 flex items-center bg-red-500 rounded-full cursor-pointer">
+                            <div class="toggleCircle bg-gray-200 w-4 h-4 rounded-full toggle-circle"></div>
+                        </div>
+                    </td>
+                    <td class="px-2 py-1 lg:table-cell hidden discount-type-cell w-[10%]">
+                        <select class="discount-type border rounded px-1 py-0.5 w-full text-sm">
+                            <option value="Phần trăm">Phần trăm</option>
+                            <option value="Cố định">Cố định</option>
+                        </select>
+                    </td>
+                    <td class="relative random-code-cell w-[10%]">
+                        <input type="text" class="random-code border rounded px-2 py-0.5 w-full text-sm pr-8" placeholder="Nhập mã">
+                        <i class="fas fa-sync-alt absolute top-3 right-2 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-blue-600 generate-code"></i>
+                    </td>
+                    <td class="px-2 py-1 md:table-cell hidden discount-value-cell w-[10%]">
+                        <div class="relative">
+                            <input type="text" class="discount-value border rounded px-1 py-0.5 w-full text-sm pr-6" placeholder="Giá trị">
+                            <i class="fas fa-random absolute top-2 right-2 transform -translate-y-1/2 text-gray-500 cursor-pointer generate-random-value"></i>
+                        </div>
+                    </td>
+                    <td class="px-2 py-1 lg:table-cell hidden created-at-cell w-[10%]">
+                        <input type="date" class="border rounded px-1 py-0.5 w-full text-sm" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </td>
+                    <td class="px-2 py-1 md:table-cell hidden  expiry-date-cell w-[10%]">
+                        <input type="date" class="border rounded px-1 py-0.5 w-full text-sm">
+                    </td>
+                    <td class="px-2 py-1 lg:table-cell hidden minimum-order-cell w-[15%]">
+                        <div class="flex gap-1">
+                            <input type="text" class="min-value border rounded px-1 py-0.5 w-1/2 text-sm" placeholder="Tối thiểu">
+                             <input type="text" class="max-value border rounded px-1 py-0.5 w-1/2 text-sm" placeholder="Tối đa">
+                         </div>
+                    </td>
+                    <td class="px-2 py-1 lg:table-cell hidden text-center is-public-cell w-[5%]">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="form-checkbox h-4 w-4 text-green-600">
+                        </label>
+                    </td>
+                    <td class="px-2 py-1 quantity-cell w-[10%]">
+                        <input type="number" class="border rounded px-1 py-0.5 w-full text-sm" placeholder="sl">
+                    </td>
+                    <td class="px-2 py-1 text-center actions-cell w-[10%]">
+                        <button class="text-green-600 hover:underline mr-2 save-discount" title="Lưu"><i class="fas fa-check"></i></button>
+                        <button class="text-red-600 hover:underline" title="Hủy" onclick="$(this).closest('tr').remove();"><i class="fas fa-times"></i></button>
+                    </td>
+                </tr>
+            `;
+            $('table tbody').prepend(newRow);
+        });
+
+        $(document).on('change', '.created-at-cell input[type="date"]', function () {
+            const createdAt = new Date($(this).val());
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (createdAt < today) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ngày cập nhật không hợp lệ',
+                    text: 'Ngày cập nhật phải là hôm nay hoặc sau hôm nay.',
+                });
+
+                // Xóa giá trị nếu không hợp lệ
+                $(this).val('');
+            }
+        });
+
+        $(document).on('change', '.expiry-date-cell input[type="date"]', function () {
+            const $row = $(this).closest('tr');
+            const createdAtVal = $row.find('.created-at-cell input[type="date"]').val();
+            const expiryVal = $(this).val();
+
+            if (!createdAtVal || !expiryVal) return;
+
+            const createdAt = new Date(createdAtVal);
+            const expiry = new Date(expiryVal);
+
+            if (expiry <= createdAt) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ngày hết hạn không hợp lệ',
+                    text: 'Ngày hết hạn phải lớn hơn ngày cập nhật.',
+                });
+
+                // Xóa giá trị nếu không hợp lệ
+                $(this).val('');
+            }
+        });
+
+
+        // Handle Save button click event
+       $(document).on('click', '.save-discount', function () {
+            var row = $(this).closest('tr');
+
+            // Kiểm tra trạng thái của toggle
+            var isActive = row.find('.toggleWrapper').hasClass('bg-green-500'); // Kiểm tra xem có class 'bg-green-500' không
+
+            var discountCode = {
+                discountCodeID: '', // Để trống nếu bạn muốn hệ thống tự động sinh ID
+                code: row.find('.random-code-cell .random-code').val(),
+                discountAmount: row.find('.discount-value-cell .discount-value').val(),
+                discountType: row.find('.discount-type-cell .discount-type').val(),
+                expiryDate: row.find('.expiry-date-cell input[type="date"]').val(),
+                minimumOrderValue: row.find('.minimum-order-cell .min-value').val(),
+                maxDiscountAmount: row.find('.minimum-order-cell .max-value').val(),
+                isPublic: row.find('.is-public-cell input[type="checkbox"]').is(':checked'),
+                usageLimit: row.find('.quantity-cell input').val(),
+                isActive: isActive, // Trạng thái kích hoạt từ toggle
+                updatedAt: row.find('.created-at-cell input[type="date"]').val() || new Date(), // Nếu có ngày tạo, dùng; nếu không, dùng ngày hiện tại
+                createdAt: new Date() // Thời gian cập nhật
+            };
+
+            // Send the model to the server using Ajax
+         $.ajax({
+                url: '@Url.Action("SaveDiscount", "DiscountCodes")', // Đảm bảo URL đúng
+                type: 'POST',
+                data: JSON.stringify(discountCode),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công!',
+                            text: response.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+
+                        setTimeout(() => {
+                            location.reload(); // Reload sau khi Swal đóng
+                        }, 2000);
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: response.message
+                        });
+                    }
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: 'Không thể lưu mã giảm giá.'
+                    });
+                }
+            });
+
+        });
+
+
+
+
+        $(document).on('input', '.discount-value', function () {
+            const $row = $(this).closest('tr');
+            const $input = $(this);
+            const type = $row.find('.discount-type').val();
+            let rawValue = $input.val().replace(/[^\d]/g, ''); // loại bỏ ký tự không phải số
+            let value = parseInt(rawValue, 10) || 0;
+
+            if (type === 'Phần trăm') {
+                value = Math.min(Math.max(value, 0), 100);
+            } else if (type === 'Cố định') {
+                value = Math.max(value, 1000);
+            }
+
+            $input.val(value.toString());
+        });
+
+        $(document).on('change', '.discount-type', function () {
+            const $row = $(this).closest('tr');
+            $row.find('.discount-value').val('');
+        });
+
+        $(document).on('click', '.generate-random-value', function () {
+            const $row = $(this).closest('tr');
+            const $input = $row.find('.discount-value');
+            const discountType = $row.find('.discount-type').val();
+
+            let value = 0;
+            if (discountType === 'Phần trăm') {
+                value = Math.floor(Math.random() * 51); // 0 - 100
+            } else if (discountType === 'Cố định') {
+                value = Math.floor(Math.random() * 100) * 1000 + 1000; // 1000 - 100000
+            }
+
+            $input.val(value);
+        });
+
+        function generateRandomCode(length = 8) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return result;
+        }
+
+        $(document).on('click', '.generate-code', function () {
+            const input = $(this).siblings('input.random-code');
+            input.val(generateRandomCode());
+        });
+
+        let isToggled = false;
+
+        $(document).on('click', '.toggleWrapper', function () {
+            const $toggle = $(this);
+            const $circle = $toggle.find(".toggleCircle");
+
+            const isActive = $toggle.hasClass("bg-green-500");
+            const newIsActive = !isActive;
+
+            // Cập nhật giao diện toggle
+            $toggle.toggleClass("bg-green-500 bg-red-500");
+            $circle.css("transform", newIsActive ? "translateX(25px)" : "translateX(0)");
+
+             const itemData = $toggle.closest("tr").find(".btn-inline-edit").data("item");
+            const id = itemData?.DiscountCodeID;
+
+            if (!id) return;
+
+            // Gửi Ajax để cập nhật IsActive
+            $.ajax({
+                url: '@Url.Action("ToggleIsActive", "DiscountCodes")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ id: id, isActive: newIsActive }),
+                success: function (response) {
+                    // Không cần thông báo, nhưng có thể log nếu cần
+                    //console.log("Đã cập nhật IsActive:", response);
+                },
+                error: function () {
+                    console.error("Lỗi khi cập nhật IsActive.");
+                }
+            });
+        });
+    });
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        if (isNaN(date)) return '';
+        return date.toISOString().slice(0, 10); // yyyy-mm-dd
+    }
+
+    $(document).on("click", ".btn-inline-edit", function () {
+        const item = $(this).data("item");
+        //console.log("UpdatedAt raw:", item.UpdatedAt);
+        console.log(item.UpdatedAt);
+        console.log(formatDate(item.ExpiryDate));
+        const $row = $(this).closest("tr");
+
+        const editHtml = `
+        <tr class="edit-mode border-t" data-id="${item.DiscountCodeID
+        }">
+            <td class="px-2 py-1 md:table-cell hidden w-[5%]">
+                <div class="toggleWrapper w-10 h-4 flex items-center
+                    ${item.IsActive ? 'bg-green-500' : 'bg-red-500'} rounded-full cursor-pointer is-active-toggle">
+                    <div class="toggleCircle bg-gray-200 w-4 h-4 rounded-full toggle-circle"
+                        style="transform: ${item.IsActive ? 'translateX(25px)' : 'translateX(0)'};"></div>
+                </div>
+            </td>
+            <td class="px-2 py-1 lg:table-cell hidden w-[10%]">
+                <select class="discount-type border rounded px-1 py-0.5 w-full text-sm">
+                    <option ${item.DiscountType === "Phần trăm" ? "selected" : ""}>Phần trăm</option>
+                    <option ${item.DiscountType === "Cố định" ? "selected" : ""}>Cố định</option>
+                </select>
+            </td>
+            <td class="px-2 py-1 relative w-[10%]">
+                <input type="text" class="random-code code border rounded px-1 py-0.5 w-full text-sm pr-8" value="${item.Code}" />
+                <i class="fas fa-sync-alt absolute top-3 right-3 -translate-y-1/2 text-gray-500 cursor-pointer hover:text-blue-600 generate-code"></i>
+            </td>
+            <td class="px-2 py-1 md:table-cell hidden relative w-[10%]">
+                <input type="text" class="discount-value border rounded px-1 py-0.5 w-full text-sm pr-6" value="${item.DiscountAmount}" />
+                <i class="fas fa-random absolute top-3 right-3 transform -translate-y-1/2 text-gray-500 cursor-pointer generate-random-value"></i>
+            </td>
+            <td class="created-at-cell px-2 py-1 lg:table-cell hidden w-[10%]">
+                <input type="date" class=" updated-at border rounded px-1 py-0.5 w-full text-sm" value="${formatDate(item.UpdatedAt)}" />
+            </td>
+            <td class="expiry-date-cell px-2 py-1 md:table-cell hidden w-[10%]">
+                <input type="date" class=" expiry-date border rounded px-1 py-0.5 w-full text-sm" value="${formatDate(item.ExpiryDate)}" />
+            </td>
+            <td class="px-2 py-1 lg:table-cell hidden w-[15%]">
+                <div class="flex gap-1">
+                    <input type="text" class="min-order-value border rounded px-1 py-0.5 w-full text-sm w-1/2" value="${item.MinimumOrderValue || 0}" />
+                    <input type="text" class="max-order-value border rounded px-1 py-0.5 w-full text-sm w-1/2" value="${item.MaxDiscountAmount || 0}" />
+                </div>
+            </td>
+            <td class="px-2 py-1 lg:table-cell hidden text-center w-[5%]">
+                <input type="checkbox" class="is-public" ${item.IsPublic ? "checked" : ""} />
+            </td>
+            <td class="px-2 py-1 w-[10%]">
+                <input type="number" class="usage-limit border rounded px-1 py-0.5 w-full text-sm" value="${item.UsageLimit || ''}" />
+            </td>
+            <td class="px-2 py-1 text-center w-[10%]">
+                <button class="btn-save text-green-600 hover:underline mr-2" title="Lưu"><i class="fas fa-check"></i></button>
+                <button class="btn-cancel text-red-500 px-2 py-1 text-sm rounded"><i class="fas fa-times"></i></button>
+            </td>
+        </tr>
+    `;
+
+        $row.replaceWith(editHtml);
+    });
+
+       $(document).on("click", ".btn-save", function () {
+           const $row = $(this).closest("tr");
+           const discountId = $row.data("id");
+
+           const discountCode = {
+               DiscountCodeID: discountId,
+            Code: $row.find('.code').val(),
+            DiscountType: $row.find('.discount-type').val(),
+            DiscountAmount: parseFloat($row.find('.discount-value').val()) || 0,
+            UpdatedAt: $row.find('.updated-at').val(),
+            ExpiryDate: $row.find('.expiry-date').val(),
+            MinimumOrderValue: parseFloat($row.find('.min-order-value').val()) || 0,
+            MaxDiscountAmount: parseFloat($row.find('.max-order-value').val()) || 0,
+            IsPublic: $row.find('.is-public').is(':checked'),
+            UsageLimit: parseInt($row.find('.usage-limit').val()) || null,
+            IsActive: $row.find('.is-active-toggle').hasClass('bg-green-500')
+        };
+
+        $.ajax({
+            url: '@Url.Action("SaveDiscount", "DiscountCodes")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(discountCode),
+            success: function (response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Đã lưu thành công!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi!', response.message, 'error');
+                }
+            },
+            error: function () {
+                Swal.fire('Lỗi!', 'Không thể lưu dữ liệu.', 'error');
+            }
+        });
+    });
+
+
+    // Optional: xử lý nút "Hủy"
+    $(document).on("click", ".btn-cancel", function () {
+        location.reload(); // hoặc reload riêng dòng từ server qua Ajax
+    });
+
+     $(document).on("click", ".btn-delete-discount", function () {
+        const id = $(this).data("id");
+        const row = $(this).closest("tr");
+
+        Swal.fire({
+            title: "Bạn có chắc muốn xoá?",
+            text: "Hành động này không thể hoàn tác!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#aaa",
+            confirmButtonText: "Xoá",
+            cancelButtonText: "Huỷ"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("DeleteConfirmed", "DiscountCodes")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire("Đã xoá!", res.message, "success");
+                            row.remove();
+                        } else {
+                            Swal.fire("Lỗi!", res.message, "error");
+                        }
+                    },
+                    error: function () {
+                        Swal.fire("Lỗi!", "Không thể xoá mã giảm giá.", "error");
+                    }
+                });
+            }
+        });
+     });
+
+    $(document).ready(function () {
+        $('.filter-input, .filter-select').on('input change', function () {
+            const filters = {};
+            $('.filter-input, .filter-select').each(function () {
+                const key = $(this).data('filter');
+                const val = $(this).val()?.toLowerCase()?.trim();
+                if (val) filters[key] = val;
+            });
+
+            $('tbody tr').each(function () {
+                const row = $(this);
+                let visible = true;
+
+                Object.entries(filters).forEach(([key, value]) => {
+                    const cell = row.find(`td[data-key="${key}"]`);
+                    const text = cell.text().toLowerCase().trim();
+                    if (!text.includes(value)) visible = false;
+                });
+
+                row.toggle(visible);
+            });
+        });
+        let currentSort = { key: '', direction: 'asc' };
+
+        $('.sortable').css('cursor', 'pointer').on('click', function () {
+            const key = $(this).data('sort');
+            const $iconSpan = $(this).find('.sort-icon');
+            const direction = (currentSort.key === key && currentSort.direction === 'asc') ? 'desc' : 'asc';
+            currentSort = { key, direction };
+
+            // Reset tất cả icon về mặc định
+            $('.sort-icon').html('<i class="fas fa-sort text-gray-400"></i>');
+
+            // Set icon sort mới
+            $iconSpan.html(direction === 'asc'
+                ? '<i class="fas fa-sort-up text-blue-600"></i> <span class="text-xs text-blue-600 ml-1"></span>'
+                : '<i class="fas fa-sort-down text-blue-600"></i> <span class="text-xs text-blue-600 ml-1"></span>');
+
+            const rows = $('tbody tr').get();
+
+            rows.sort(function (a, b) {
+                const aText = $(a).find(`td[data-key="${key}"]`).text().trim().replace(/,/g, '');
+                const bText = $(b).find(`td[data-key="${key}"]`).text().trim().replace(/,/g, '');
+
+                const aVal = parseFloat(aText) || 0;
+                const bVal = parseFloat(bText) || 0;
+
+                return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+
+            $.each(rows, function (_, row) {
+                $('tbody').append(row);
+            });
+        });
+    });
+
+    $(document).on("click", ".btn-view-assigned", function () {
+        var discountCodeId = $(this).data("id");
+
+        // Gọi Ajax để lấy nội dung
+        $.get("/DiscountCodes/GetAssignedCustomers", { discountCodeId: discountCodeId }, function (html) {
+            $("#modalContent").html(html);
+            $("#boxModal").removeClass("hidden");
+        });
+    });
+</script>
+

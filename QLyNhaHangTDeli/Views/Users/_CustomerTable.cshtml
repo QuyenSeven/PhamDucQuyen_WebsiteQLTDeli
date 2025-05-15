@@ -1,0 +1,242 @@
+﻿
+<style>
+    .active-sort {
+        font-weight: bold;
+        color: #2563eb; /* màu xanh dương */
+    }
+</style>
+<div class="max-h-[360px] overflow-y-auto  invisible-scrollbar ">
+    <table class="min-w-full table-auto bg-white border-collapse">
+        <!-- Phần thead cố định -->
+        <thead class="bg-gray-200 sticky top-0 z-10">
+            <tr>
+                <th class="py-2 px-4 border-b text-center hidden md:table-cell">ID</th>
+                <th class="py-2 px-4 border-b text-left  hidden lg:table-cell">Ảnh</th>
+                <th class="cursor-pointer py-2 px-4 border-b text-left" id="sortName">
+                    Tên <span id="nameSortIcon">▲▼</span>
+                </th>
+                <th class="py-2 px-4 border-b text-left">Email</th>
+                <th class="py-2 px-4 border-b text-left hidden lg:table-cell">Số điện thoại</th>
+                <th class="py-2 px-4 border-b text-center hidden xl:table-cell">Địa chỉ</th>
+                <th class="cursor-pointer py-2 px-4 border-b text-left" id="sortSpending">
+                    Tiêu phí <span id="spendingSortIcon">▲▼</span>
+                </th>
+                <th class="py-2 px-4 border-b text-center hidden xl:table-cell"></th>
+            </tr>
+            
+        </thead>
+
+        <!-- Phần tbody có thể cuộn -->
+        <tbody class="overflow-y-auto invisible-scrollbar  mb-5" >
+            @foreach (var customer in Model.Customers)
+            {
+                <tr class="hover:bg-gray-50" data-customer-id="@customer.CustomerID">
+                    <td class="py-2 px-4 border-b text-center hidden md:table-cell">@customer.CustomerID</td>
+                    @{
+                        var userImage = customer.ProfilePicture;
+                        bool hasValidImage = !string.IsNullOrEmpty(userImage) && !userImage.ToLower().Contains("no-image");
+                        var imgUser = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(userImage, Url);
+
+                    }
+
+                    <td class="py-2 px-4 border-b text-left hidden lg:table-cell">
+                        <img src="@((hasValidImage ? imgUser : "https://cdn-icons-png.flaticon.com/512/847/847969.png"))"
+                             class="w-12 h-12 rounded-full object-cover border-2 border-gray-300 shadow-md hover:opacity-80 transition duration-200 bg-gray-100" />
+                    </td>
+
+                    <td class="py-2 px-4 border-b">
+                        <p class="text-blue-500">@customer.FullName</p>
+                    </td>
+                    <td class="py-2 px-4 border-b">@customer.Email</td>
+                    <td class="py-2 px-4 border-b hidden lg:table-cell">@(customer?.Phone ?? "")</td>
+
+                    <td class="py-2 px-4 border-b text-center hidden xl:table-cell">
+                        @(customer?.Address ?? "")
+                    </td>
+                    <td class="py-2 px-4 border-b text-right spending-col">
+                        0 đ
+                    </td>
+                    <td class="py-2 px-4 border-b text-center hidden xl:table-cell">
+                        <a href="javascript:void(0)"
+                           class="text-green-600 hover:underline btn-view-discount"
+                           title="Mã giảm giá"
+                           data-customer-id="@customer.CustomerID">
+                            <i class="fas fa-ticket-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let sortNameAsc = true;
+    let sortSpendingAsc = true;
+    
+    const allOrders = @Html.Raw(Json.Encode(ViewBag.AllOrders));
+   // console.log(allOrders);
+    
+    updateSpendingByMonth();
+
+    function sortTable(colIndex, isNumeric = false, asc = true) {
+        const visibleTable = $(".tab-content:visible").find("table");
+        let rows = visibleTable.find("tbody tr").get();
+
+        rows.sort(function (a, b) {
+            let A = $(a).find("td").eq(colIndex).text().trim().toLowerCase();
+            let B = $(b).find("td").eq(colIndex).text().trim().toLowerCase();
+
+            if (isNumeric) {
+                A = parseFloat(A) || 0;
+                B = parseFloat(B) || 0;
+                return asc ? A - B : B - A;
+            }
+
+            return asc ? A.localeCompare(B) : B.localeCompare(A);
+        });
+
+        $.each(rows, function (index, row) {
+            visibleTable.find("tbody").append(row);
+        });
+    }
+
+    function resetSortStyles() {
+        $("#sortName, #sortSpending").removeClass("active-sort");
+        $("#nameSortIcon").text("▲▼");
+        $("#spendingSortIcon").text("▲▼");
+    }
+
+    $("#sortName").on("click", function () {
+        resetSortStyles();
+        sortTable(2, false, sortNameAsc);
+        $("#sortName").addClass("active-sort");
+        $("#nameSortIcon").text(sortNameAsc ? "▲" : "▼");
+        sortNameAsc = !sortNameAsc;
+    });
+
+    $("#sortSpending").on("click", function () {
+        resetSortStyles();
+        sortTable(6, true, sortSpendingAsc);
+        $("#sortSpending").addClass("active-sort");
+        $("#spendingSortIcon").text(sortSpendingAsc ? "▲" : "▼");
+        sortSpendingAsc = !sortSpendingAsc;
+    });
+
+    function formatCurrency(num) {
+        return num.toLocaleString('vi-VN') + " đ";
+    }
+
+    function updateSpendingByMonth() {
+       // console.log("Checkbox filterByMonth checked?", $('#filterByMonth').is(':checked'));
+        var isChecked = $('#filterByMonth').is(':checked');
+        var selectedMonth = parseInt($('#monthSelector').val());
+        var spendingMap = {};
+
+        // Nếu checkbox được tick, tính tổng tiêu phí theo tháng
+        if (isChecked) {
+            allOrders.forEach(function (order, index) {
+                if (!order.CreatedAt || !order.TotalAmount) {
+                    //console.log(`[${index}] Bỏ qua: Không có CreateAt hoặc TotalAmount`, order);
+                    return;
+                }
+
+
+                var orderDate = new Date(order.CreatedAt);
+
+                if (isNaN(orderDate)) {
+                    //console.warn("Không parse được ngày:", order.CreatedAt);
+                    return;
+                }
+                const orderMonth = orderDate.getMonth() + 1;
+
+                //console.log("Order:", order.CustomerID, "Month:", orderMonth, "Selected:", selectedMonth);
+
+                if (parseInt(orderMonth) === parseInt(selectedMonth)) {
+                    if (!spendingMap[order.CustomerID]) {
+                        spendingMap[order.CustomerID] = 0;
+                    }
+                    spendingMap[order.CustomerID] += order.TotalAmount;
+                }
+            });
+        }
+
+        // Nếu không tick checkbox, tính tổng tiêu phí của tất cả thời gian
+        if (!isChecked) {
+            $.each(allOrders, function (i, order) {
+                if (!spendingMap[order.CustomerID]) {
+                    spendingMap[order.CustomerID] = 0;
+                }
+                spendingMap[order.CustomerID] += order.TotalAmount;
+            });
+        }
+
+        // Cập nhật tiêu phí vào bảng
+        $('tr[data-customer-id]').each(function () {
+            var cid = $(this).data('customer-id');
+            var spending = spendingMap[cid] || 0;
+            $(this).find('.spending-col').text(formatCurrency(spending));
+        });
+
+       
+    }
+    $('#filterByMonth, #monthSelector').on('change', function () {
+        var isChecked = $('#filterByMonth').is(':checked');
+        var selectedMonth = parseInt($('#monthSelector').val());
+       // console.log("Đang lọc theo tháng:", selectedMonth, "Checkbox:", isChecked);
+        updateSpendingByMonth();
+    });
+
+    $(document).ready(function () {
+        // Khi click vào một hàng khách hàng
+        $('tbody').on('click', 'tr[data-customer-id]', function (e) {
+            const $td = $(e.target).closest('td');
+
+            // Nếu không phải là ô cuối cùng (td cuối) thì mới xử lý
+            const isLastColumn = $td.is(':last-child');
+            if (isLastColumn) return;
+            const customerId = $(this).data('customer-id');
+
+            $.ajax({
+                url: '/Users/Details', // Thay đổi nếu URL khác
+                method: 'GET',
+                data: { id: customerId },
+                success: function (response) {
+                    $('#modalContent').html(response);
+                    $('#boxModal').removeClass('hidden').hide().fadeIn(200); // Fade in nhẹ
+                },
+                error: function () {
+                    Swal.fire('Lỗi', 'Không thể tải thông tin khách hàng', 'error');
+                }
+            });
+        });
+
+        // Đóng modal khi bấm nút close
+        $('#closeCreateModal').on('click', function () {
+            $('#boxModal').fadeOut(200, function () {
+                $(this).addClass('hidden');
+                $('#modalContent').html('');
+            });
+        });
+    });
+
+    $('tbody').on('click', '.btn-view-discount', function (e) {
+        e.stopPropagation(); // Ngăn sự kiện click lan ra ngoài tr
+        const customerId = $(this).data('customer-id');
+
+        $.ajax({
+            url: '/DiscountCodes/AssignedList', // hoặc URL phù hợp của bạn
+            method: 'GET',
+            data: { customerId },
+            success: function (response) {
+                $('#modalContent').html(response);
+                $('#boxModal').removeClass('hidden').hide().fadeIn(200);
+            },
+            error: function () {
+                Swal.fire('Lỗi', 'Không thể tải danh sách mã giảm giá', 'error');
+            }
+        });
+    });
+
+</script>
+

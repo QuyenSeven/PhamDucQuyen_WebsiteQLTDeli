@@ -1,0 +1,150 @@
+﻿@model QLyNhaHangTDeli.Models.Product
+
+@using (Html.BeginForm("Edit", "Products", FormMethod.Post, new { id = "editProductForm" }))
+{
+    @Html.AntiForgeryToken()
+
+    <h2 class="text-lg font-bold mb-4">Thông tin Sản Phẩm</h2>
+    <input type="hidden" name="ProductID" value="@Model.ProductID" />
+    <!-- Hiển thị ảnh sản phẩm -->
+    <div class="mb-4 text-center">
+        <div id="imagePreview" class="w-[100px] h-[100px] bg-gray-200 rounded-lg flex items-center justify-center cursor-pointer mx-auto">
+
+            <!-- Hiển thị ảnh sản phẩm nếu có -->
+            @if (!string.IsNullOrEmpty(Model.ImageURL))
+            {
+                <img src="@Model.ImageURL" alt="Image" class="w-full h-full object-cover rounded-lg" />
+            }
+            else
+            {
+                <span>Chưa có ảnh</span>
+            }
+        </div>
+        <label class="block text-gray-700 mt-2">Ảnh </label>
+        <!-- Input file ảnh -->
+        <input type="file" id="fileInput" name="imageFile" class="hidden" accept="image/*">
+    </div>
+
+    <!-- Tên sản phẩm -->
+    <div class="mb-4">
+        <label class="block text-gray-700">Tên sản phẩm</label>
+        <input type="text" name="ProductName" class="border border-gray-300 rounded-lg p-2 w-full" value="@Model.ProductName">
+    </div>
+    <div class="mb-4">
+        <label class="block text-gray-700">Mô tả</label>
+        <textarea rows="5" name="ProductDes" class="border border-gray-300 rounded-lg p-2 w-full">@Model.ProductDes</textarea>
+    </div>
+    <!-- Giá sản phẩm -->
+    <div class="mb-4">
+        <label class="block text-gray-700">Giá</label>
+        <input type="text" name="Price" class="border border-gray-300 rounded-lg p-2 w-full" value="@Model.Price">
+    </div>
+
+    <!-- Loại sản phẩm -->
+    <div class="flex gap-4 mb-4">
+        <!-- Loại sản phẩm -->
+        <div class="flex-1">
+            <label class="block text-gray-700">Loại sản phẩm</label>
+            <select id="categorySelect" name="CategoryID" class="border border-gray-300 rounded-lg p-2 w-full bg-white">
+                <option value="">-- Chọn loại sản phẩm --</option>
+                @foreach (var category in ViewBag.Categories as SelectList)
+                {
+                    <option value="@category.Value" @(category.Value == Model.CategoryID.ToString() ? "selected" : "")>
+                        @category.Text
+                    </option>
+                }
+            </select>
+        </div>
+
+        <!-- Trạng thái sản phẩm -->
+        <div class="flex-1">
+            <label class="block text-gray-700">Trạng thái</label>
+            <select name="Status" class="border border-gray-300 rounded-lg p-2 w-full bg-white">
+                <option value="Còn hàng" @(Model.Status == "Còn hàng" ? "selected" : "")>Còn hàng</option>
+                <option value="Hết hàng" @(Model.Status == "Hết hàng" ? "selected" : "")>Hết hàng</option>
+            </select>
+        </div>
+    </div>
+
+
+    <div class="text-center">
+        <button type="submit" class="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg">
+            Lưu
+        </button>
+    </div>
+}
+<script>
+    $(document).ready(function () {
+        $('#imagePreview').on('click', function () {
+            $('#fileInput').click();
+        });
+
+        // Khi người dùng chọn file
+        $('#fileInput').on('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+                    $('#imagePreview').html(`
+                <img src="${event.target.result}" class="w-full h-full object-cover rounded-lg" />
+            `);
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                // Nếu không chọn file, reset lại preview
+                $('#imagePreview').html('<span class="text-gray-500">Click để chọn ảnh</span>');
+            }
+        });
+
+        $('#editProductForm').on('submit', function (e) {
+            e.preventDefault();  // Ngừng hành động submit mặc định
+
+            var formData = new FormData(this);  // Thu thập dữ liệu form
+
+            $.ajax({
+                url: '/Products/Edit',  // URL action xử lý tạo sản phẩm
+                type: 'POST',
+                headers: {
+                    "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: formData, // ✅ sử dụng formData ở đây
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    if (response.success) {
+                        // Use Swal.fire for success
+                        Swal.fire({
+                            title: 'Thành công!',
+                            text: 'Sản phẩm đã được sửa!',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    }
+                    else {
+                        // Use Swal.fire for error
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: response.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function () {
+                    // Use Swal.fire for error in case of AJAX failure
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: 'Có lỗi xảy ra khi sửa sản phẩm!',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        });
+    });
+</script>
+

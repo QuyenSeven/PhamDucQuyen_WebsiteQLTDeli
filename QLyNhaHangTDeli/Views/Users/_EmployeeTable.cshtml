@@ -1,0 +1,120 @@
+﻿
+
+ <div class="max-h-[360px] overflow-y-auto  invisible-scrollbar ">
+     <table class="min-w-full table-auto bg-white border-collapse">
+         <!-- Phần thead cố định -->
+         <thead class="bg-gray-200 sticky top-0 z-10">
+             <tr>
+                 <th class="py-2 px-4 border-b text-center hidden md:table-cell">ID</th>
+                 <th class="py-2 px-4 border-b text-left">Họ tên</th>
+                 <th class="py-2 px-4 border-b text-left">Liên hệ</th>
+                 <th class="py-2 px-4 border-b text-left hidden lg:table-cell">Chức vụ</th>
+                 <th class="py-2 px-4 border-b text-left hidden lg:table-cell">Trạng thái</th>
+                 <th class="py-2 px-4 border-b text-center hidden xl:table-cell">Ngày vào</th>
+                 <th class="py-2 px-4 border-b text-center"></th>
+             </tr>
+             <tr>
+                 <th class="py-1 px-2 border-b text-center hidden md:table-cell">
+                    
+                 </th>
+                 <th class="py-1 px-2 border-b">
+                    
+                 </th>
+                 <th class="py-1 px-2 border-b">
+                    
+                 <th class="py-1 px-2 border-b hidden lg:table-cell">
+                     <select class="w-full text-sm border rounded p-1 filter-input bg-white" data-col="3">
+                         <option value="">Tất cả</option>
+                         @foreach (var role in ViewBag.Roles)
+                         {
+                             <option value="@role">@role</option>
+                         }
+                     </select>
+                 </th>
+                 <!-- Trạng thái -->
+                 <th class="py-1 px-2 border-b hidden lg:table-cell">
+                     <select class="w-full text-sm border rounded p-1 filter-input bg-white" data-col="4">
+                         <option value="">Tất cả</option>
+                         <option value="Hoạt động">Hoạt động</option>
+                         <option value="Đợi phê duyệt">Đợi phê duyệt</option>
+                     </select>
+                 </th>
+                 <th class="py-1 px-2 border-b text-center hidden xl:table-cell">
+                     <input type="text" class="w-full text-sm border rounded p-1 filter-input" data-col="5" placeholder="Lọc Ngày" />
+                 </th>
+                 <th class="py-1 px-2 border-b text-center"></th>
+             </tr>
+         </thead>
+
+         <!-- Phần tbody có thể cuộn -->
+         <tbody class="overflow-y-auto invisible-scrollbar  mb-5">
+             @foreach (var user in Model.Users)
+             {
+                 <tr class="hover:bg-gray-50">
+                     <td class="py-2 px-4 border-b text-center hidden md:table-cell">@user.UserID</td>
+                     <td class="py-2 px-4 border-b">
+                         <p class="text-blue-500">@user.FullName</p>
+                     </td>
+                     <td class="py-2 px-4 border-b">@user.ContactInfo</td>
+                     <td class="py-2 px-4 border-b hidden lg:table-cell">@user.Role</td>
+                     <td class="py-2 px-4 border-b text-left hidden lg:table-cell">
+                         @if (user.Status == "Hoạt động")
+                         {
+                             <span class="bg-green-200 text-green-800 px-2 py-1 rounded-full">Hoạt động</span>
+                         }
+                         else
+                         {
+                             <span class="bg-yellow-200 text-red-800 px-2 py-1 rounded-full">Đợi phê duyệt</span>
+                         }
+                     </td>
+                     <td class="py-2 px-4 border-b text-center hidden xl:table-cell">
+                         @(user.CreatedAt != default(DateTime) ? user.CreatedAt.ToString("yyyy-MM-dd") : "N/A")
+                     </td>
+                     <td class="py-2 px-4 border-b text-right">
+                         @if (user.Status == "Đợi phê duyệt")
+                         {
+                             <button class="text-green-500 hover:text-green-700 mx-1 approve-btn" data-id="@user.UserID" title="Duyệt">
+                                 <i class="fas fa-check"></i>
+                             </button>
+                         }
+                         <button class="text-blue-500 hover:text-blue-700 mx-1 openEditModal" title="Chỉnh sửa" data-id="@user.UserID">
+                             <i class="fas fa-edit"></i>
+                         </button>
+                         <button class="text-red-500 hover:text-red-700 mx-1 delete-btn" title="Xóa" data-id="@user.UserID">
+                             <i class="fas fa-trash"></i>
+                         </button>
+                     </td>
+                 </tr>
+             }
+         </tbody>
+     </table>
+    </div>
+
+<script>
+    $(".filter-input").on("input", function () {
+        // Chỉ chọn tbody của bảng đang hiển thị trong tab
+        var $rows = $(".tab-content:visible tbody tr");
+        var filters = [];
+
+        $(".filter-input").each(function () {
+            filters.push({
+                col: $(this).data("col"),
+                value: $(this).val().toLowerCase()
+            });
+        });
+
+        $rows.each(function () {
+            var show = true;
+
+            filters.forEach(function (filter) {
+                var $cell = $(this).find("td").eq(filter.col);
+                if ($cell.length && !$cell.text().toLowerCase().includes(filter.value)) {
+                    show = false;
+                }
+            }, this); // truyền 'this' vào forEach
+
+            $(this).toggle(show);
+        });
+    });
+
+</script>

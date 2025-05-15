@@ -1,0 +1,37 @@
+﻿<div class="flex justify-center mb-6 relative">
+    
+
+    @{
+        var userImage = Model.ProfilePicture;
+        bool hasValidImage = !string.IsNullOrEmpty(userImage) && !userImage.ToLower().Contains("no-image");
+        var imgUser = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(userImage, Url);
+
+    }
+    <label for="imageUpload" class="cursor-pointer flex justify-center">
+        <img id="avatarPreview"
+             src="@((hasValidImage ? imgUser : "https://cdn-icons-png.flaticon.com/512/847/847969.png"))"
+             alt="Ảnh đại diện"
+             class="w-24 h-24 rounded-full object-cover border-2 border-gray-300 shadow-md hover:opacity-80 transition duration-200 bg-gray-100" />
+    </label>
+
+</div>
+<div class="grid grid-cols-1 gap-4">
+
+    <div>
+        <label class="text-sm">Tên đầy đủ</label>
+        <input type="text" readonly name="fullName" value="@Model.FullName" class="w-full p-2 border rounded">
+    </div>
+    <div>
+        <label class="text-sm">Email</label>
+        <input type="email" readonly name="email" value="@Model.Email" class="w-full p-2 border rounded">
+    </div>
+    <div>
+        <label class="text-sm">Số điện thoại</label>
+        <input type="text" readonly name="phone" value="@Model.Phone" class="w-full p-2 border rounded">
+    </div>
+    <div>
+        <label class="text-sm">Địa chỉ</label>
+        <input type="text" readonly  name="address" value="@Model.Address" class="w-full p-2 border rounded">
+    </div>
+
+</div>

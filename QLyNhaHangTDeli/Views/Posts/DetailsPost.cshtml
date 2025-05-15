@@ -1,0 +1,218 @@
+﻿@model QLyNhaHangTDeli.Models.Post
+
+
+@{
+    ViewBag.Title = "Bài viết";
+    Layout = "~/Views/Shared/_LayoutWeb.cshtml";
+}
+
+<style>
+    #star-rating .star {
+        color: #d3d3d3; /* Màu xám khi chưa chọn */
+    }
+
+        #star-rating .star.text-yellow-500 {
+            color: #fbbf24; /* Màu vàng khi chọn */
+        }
+</style>
+
+
+<div class=" bg-gray-100 overflow-y-auto invisible-scrollbar h-full w-full">
+    <section class="relative">
+        @{
+            string image2Url = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("PostBanner", Url);
+        }
+        <img alt="A person looking through a telescope" class="w-full h-96 object-cover" src="@image2Url" />
+        <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center text-center text-white">
+            <span class="bg-green-500 px-2 py-1 rounded-full text-xl">
+                TDeli
+            </span>
+            <h1 class="text-4xl font-bold mt-2">
+                Tận hưởng cuộc sống
+            </h1>
+            <p class="text-lg mt-2">
+                Thưởng thức những tách trà và cà phê mang đầy hương vị Việt Nam
+            </p>
+        </div>
+    </section>
+
+    <section class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="history.back()" class="flex items-center text-gray-800 hover:text-purple-700 font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Quay lại
+            </button>
+        </div>
+
+        <div id="loading" class="hidden text-center my-6 text-purple-700 font-semibold">
+            Đang tải bài viết...
+        </div>
+        <h1 class="text-2xl font-bold">@Model.Title</h1>
+        @{
+            var avg = Model.AverageRating ?? 0;
+        }
+
+        @if (avg > 0)
+        {
+            <div class="flex items-center space-x-1">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    var fillPercent = Math.Max(0, Math.Min(100, (avg - (i - 1)) * 100));
+
+                    <div class="relative w-5 h-5">
+                        <div class="absolute top-0 left-0 w-full h-full text-gray-300">&#9733;</div> <!-- sao rỗng -->
+                        <div class="absolute top-0 left-0 h-full overflow-hidden" style="width:@fillPercent%">
+                            <div class="text-yellow-500">&#9733;</div> <!-- sao đầy phần trăm -->
+                        </div>
+                    </div>
+                }
+                <span class="ml-2 text-sm text-gray-500 p-1">@avg.ToString("0.0") sao</span>
+            </div>
+        }
+        <p class="text-gray-500 mb-2"><strong>Loại:</strong> @Model.PostType</p>
+        <p class="text-sm text-gray-400 mb-4">Cập nhật: @(Model.UpdatedAt?.ToString("dd/MM/yyyy HH:mm"))</p>
+        <div class="text-base text-gray-800">
+            @Html.Raw(Model.Summary)
+        </div>
+
+        <div class="flex flex-col items-center my-4 mt-4">
+            <img src="@QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(Model.ImageUrl, Url)"
+                 class="w-[500px] h-[400px] object-cover rounded shadow" />
+            <p class="italic text-sm text-gray-500 mt-2">
+                Hình: @Model.ImageUrl
+            </p>
+        </div>
+
+        <div class="text-base text-gray-800 ">
+            @foreach (var line in Model.Content.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)))
+            {
+                <p class="leading-[1.5] text-justify">@line</p>
+            }
+
+        </div>
+
+
+
+    </section>
+    <!-- BÌNH LUẬN -->
+    <div id="comments-section" class="mt-10 border-t p-6 ">
+        <h2 class="text-xl font-semibold mb-4 text-blue-700">Bình luận</h2>
+
+        <!-- Danh sách bình luận -->
+        <div id="comment-list" class="space-y-4">
+            <p class="text-gray-500 italic">Đang tải bình luận...</p>
+        </div>
+        <div id="loadMoreWrapper" class="mt-4">
+            <button id="loadMoreBtn" class="text-blue-500 hover:underline">Xem thêm bình luận</button>
+        </div>
+
+        <!-- Form gửi bình luận -->
+        <div class="bg-white p-4 mt-6 rounded shadow border">
+            <h3 class="text-lg font-medium mb-2 text-gray-800">Để lại bình luận</h3>
+            <!-- Form gửi bình luận -->
+            <form id="comment-form">
+                <input type="hidden" name="postId" value="@Model.PostID" />
+                @if (Model.PostType == "Sản phẩm")
+                {
+                    <div id="star-rating" class="flex space-x-1 text-2xl text-yellow-400 mb-3 cursor-pointer select-none">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span class="star" data-value="@i">&#9733;</span>
+                        }
+                    </div>
+                    <input type="hidden" name="rating" id="rating-value" value="0" />
+                }
+                <textarea name="content" required rows="3" class="w-full border rounded p-2 mb-2"
+                          placeholder="Nhập bình luận..."></textarea>
+
+                <!-- Đánh giá sao chỉ hiển thị khi postType là "Product" -->
+
+
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-green-500">
+                    Gửi bình luận
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+        $(document).ready(function () {
+
+        const postId = "@(Model.PostID)";
+
+
+            function loadComments() {
+                $("#comment-list").load("/Comments/Get5Comments?postId=" + postId);
+            }
+
+            loadComments(); // Khi trang vừa load
+            $('#loadMoreBtn').click(function () {
+                $('#boxModal').removeClass('hidden');
+                $('#modalContent').html('<p class="italic text-gray-500">Đang tải bình luận...</p>');
+
+                // Gọi API lấy tất cả bình luận
+                $.get('/Comments/GetAllComments?postId=' + postId, function (data) {
+                    $('#modalContent').html(data);
+                });
+            });
+        loadComments(); // Khi trang vừa load
+
+        // Xử lý sự kiện click để chọn sao
+        $("#star-rating .star").click(function () {
+            const ratingValue = $(this).data("value");
+
+            // Cập nhật màu sắc sao đã chọn
+            $("#star-rating .star").each(function () {
+                if ($(this).data("value") <= ratingValue) {
+                    $(this).addClass("text-yellow-500"); // Đổi sao thành màu vàng
+                } else {
+                    $(this).removeClass("text-yellow-500"); // Xóa màu vàng
+                }
+            });
+
+            // Cập nhật giá trị rating vào hidden input
+            $("#rating-value").val(ratingValue);
+        });
+
+        // Gửi bình luận
+        $("#comment-form").submit(function (e) {
+            e.preventDefault();
+
+            let formData = $(this).serialize();  // Đổi từ `const` thành `let` để có thể thay đổi
+
+            // Lấy giá trị rating từ trường hidden
+            const rating = $("#rating-value").val();
+
+            if (rating && parseInt(rating) >= 1 && parseInt(rating) <= 5) {
+                formData += "&rating=" + rating;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "/Comments/AddComment",
+                data: formData,
+                success: function (res) {
+                    if (res.success) {
+                        loadComments();
+                        $("#comment-form textarea").val(""); // Xóa ô nhập
+                        $("#rating-value").val(""); // Reset rating
+                        $("#star-rating .star").removeClass("text-yellow-500"); // Reset sao
+                    }
+                },
+                error: function (xhr) {
+                    if (xhr.status === 401) {
+                        Swal.fire("Bạn cần đăng nhập để bình luận!", "", "warning");
+                    } else {
+                        Swal.fire("Có lỗi xảy ra!", "", "error");
+                    }
+                }
+            });
+        });
+
+        });
+</script>
+

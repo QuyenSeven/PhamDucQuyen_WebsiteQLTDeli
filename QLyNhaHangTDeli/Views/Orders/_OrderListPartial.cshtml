@@ -1,0 +1,156 @@
+﻿@model List<QLyNhaHangTDeli.Models.Order>
+@{
+    var pagination = (QLyNhaHangTDeli.Models.PaginationModel)ViewBag.Pagination;
+}
+<div class="h-[80vh] flex flex-col">
+    <div class="flex-1">
+    <table class="w-full table-auto border text-sm bg-white ">
+        <thead class="bg-white">
+            <tr>
+                <th class="px-2 py-1 text-left">Mã đơn</th>
+                <th class="px-2 py-1 text-left">Ngày</th>
+                <th class="px-2 py-1 text-left">Tổng</th>
+                <th class="px-2 py-1 text-left">Trạng thái</th>
+                <th class="px-2 py-1 text-left">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model)
+            {
+                <tr>
+                    <td class="px-2 py-1 text-blue-500">@order.OrderID</td>
+                    <td class="px-2 py-1">@(order.CreatedAt?.ToString("dd/MM/yyyy") ?? "")</td>
+                    <td class="px-2 py-1">@(order.TotalAmount?.ToString("N0") ?? "0") VNĐ</td>
+                    <td class="px-2 py-1">@order.OrderStatus</td>
+                    <td class="px-2 py-1 flex gap-2 order-actions ">
+                        @if (order.OrderStatus == "Đã đặt đơn")
+                        {
+                            <a href="#" class="text-green-500 text-xl update-status" data-id="@order.OrderID" title="Hoàn thành">
+                                <i class="fas fa-check-circle"></i>
+                            </a>
+                        }
+                        else if (order.OrderStatus == "Đang vận chuyển")
+                        {
+                            <a href="#" class="text-yellow-500 text-xl" title="Đang vận chuyển">
+                                <i class="fas fa-clock"></i> <!-- Icon đồng hồ -->
+                            </a>
+                        }
+                        else if (order.OrderStatus == "Đã thanh toán")
+                        {
+                            <a href="#" class="text-blue-500 text-xl" title="Đã thanh toán">
+                                <i class="fas fa-file-invoice"></i> <!-- Icon hóa đơn -->
+                            </a>
+                        }
+                        <a href="javascript:void(0);"
+                           onclick="loadOrderDetails('@order.OrderID')" 
+                           class="text-blue-500 bg-green-200 text-green-500 p-2 rounded-full text-sm" title="Chi tiết">
+                            chi tiết
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    </div>
+
+    <div class="mt-4 flex justify-center gap-2">
+        @if (pagination.CurrentPage > 1)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage - 1)">«</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">«</span>
+        }
+
+        <span class="px-2 py-1 text-sm">Trang @pagination.CurrentPage / @pagination.TotalPages</span>
+
+        @if (pagination.CurrentPage < pagination.TotalPages)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage + 1)">»</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">»</span>
+        }
+    </div>
+    </div>
+<script>
+     $(document).on("click", ".update-status", function (e) {
+        e.preventDefault();
+        var orderId = $(this).data("id");
+
+        Swal.fire({
+            title: "Cập nhật trạng thái?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Xác nhận",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '@Url.Action("UpdateOrderStatus", "Orders")',
+                    type: 'POST',
+                    data: { id: orderId },
+                    success: function (res) {
+                        Swal.fire("Đã cập nhật!", "", "success").then(() => {
+                            location.reload(); // hoặc gọi Ajax load lại danh sách nếu cần
+                        });
+                    },
+                    error: function () {
+                        Swal.fire("Lỗi!", "Không thể cập nhật trạng thái.", "error");
+                    }
+                });
+            }
+        });
+     });
+
+         function updateOrderRow(orderID, newStatus) {
+        const row = document.querySelector(`tr[data-id='${orderID}']`);
+        if (row) {
+            const statusCell = row.querySelector('.order-status');
+            const actionCell = row.querySelector('.order-actions');
+
+            statusCell.textContent = newStatus;
+
+            // Cập nhật lại nút thao tác nếu muốn
+            let iconHtml = '';
+            if (newStatus === 'Đã giao') {
+                iconHtml = `<a href="#" class="text-green-500 text-xl" title="Hoàn thành">
+                                <i class="fas fa-check-circle"></i>
+                            </a>`;
+            }
+
+            const detailUrl = row.getAttribute('data-detail');
+            actionCell.innerHTML = iconHtml + `
+                <a href="${detailUrl}"
+                   class="text-blue-500 bg-green-200 text-green-500 p-2 rounded-full text-sm"
+                   title="Chi tiết">chi tiết</a>`;
+        }
+    }
+
+    setInterval(function () {
+        $.get("@Url.Action("CheckAutoUpdateOrders", "Orders")", function (res) {
+            if (res.success && res.updatedOrders.length > 0) {
+                res.updatedOrders.forEach(order => {
+                    updateOrderRow(order.OrderID, order.OrderStatus);
+                });
+            }
+        });
+    }, 60000);
+
+    function loadOrderDetails(orderId) {
+        $.ajax({
+            url: '/Orders/OrderDetails',
+            type: 'GET',
+            data: { id: orderId },
+            success: function (html) {
+                $('#modalContent').html(html);
+                $('#boxModal').removeClass('hidden');
+            },
+            error: function () {
+                alert('Không thể tải chi tiết đơn hàng!');
+            }
+        });
+    }
+
+</script>

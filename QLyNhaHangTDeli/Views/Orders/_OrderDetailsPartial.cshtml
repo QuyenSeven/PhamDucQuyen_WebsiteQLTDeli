@@ -1,0 +1,56 @@
+﻿@model QLyNhaHangTDeli.Models.Order
+
+
+
+@if (Model.CustomerID == "QUEST001")
+{
+    var address = "";
+    var keyword = "dia chi";
+    var index = Model.OrderDescription.IndexOf(keyword);
+    if (index >= 0)
+    {
+        address = Model.OrderDescription.Substring(index + keyword.Length).Trim();
+    }
+    <h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng tại địa chỉ @address</h2>
+
+}
+else if (Model.CustomerID == null)
+{
+    <h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng của @Model.OrderID</h2>
+}
+else
+{
+<h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng của @Model.Customer.FullName</h2>
+
+}
+
+
+<div class="h-[500px] overflow-y-auto">
+    <table class="w-full text-sm border mb-4">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-2 py-1 text-left">Sản phẩm</th>
+                <th class="px-2 py-1 text-left">Số lượng</th>
+                <th class="px-2 py-1 text-left">Đơn giá</th>
+                <th class="px-2 py-1 text-left">Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderDetails)
+            {
+                <tr>
+                    <td class="px-2 py-1">@item.Product.ProductName</td>
+                    <td class="px-2 py-1">@item.Quantity</td>
+                    <td class="px-2 py-1">@item.Product.Price.ToString("N0") VNĐ</td>
+                    <td class="px-2 py-1">@((item.Quantity * item.Product.Price).ToString("N0") ?? "0") VNĐ</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="text-right">
+    <p>Tổng tiền: <strong>@(Model.TotalAmount?.ToString("N0")) VNĐ</strong></p>
+    <p>Giảm giá: <strong>@(Model.Discount?.ToString("N0") ?? "0") VNĐ</strong></p>
+</div>
+

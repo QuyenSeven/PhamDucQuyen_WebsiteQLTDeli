@@ -1,0 +1,127 @@
+﻿@model QLyNhaHangTDeli.Models.PaginationModel
+
+@{
+    var totalPages = Model.TotalPages;
+    var currentPage = Model.CurrentPage;
+}
+
+<div id="pagination">
+    @if (currentPage > 1)
+    {
+        <a href="#" data-page="@(currentPage - 1)" class="page-link nav-prev px-3 py-2 rounded bg-gray-200 hover:bg-green-500 hover:text-white">«</a>
+    }
+
+    @if (totalPages <= 4)
+    {
+        // Hiển thị tất cả nếu số trang ít
+        for (int i = 1; i <= totalPages; i++)
+        {
+            <a href="#"
+               data-page="@i"
+               class="page-link page-number px-4 py-2 rounded @((i == currentPage) ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                @i
+            </a>
+        }
+    }
+    else
+    {
+        if (currentPage <= 2)
+        {
+            // Trang đầu hoặc thứ 2
+            for (int i = 1; i <= 2; i++)
+            {
+                <a href="#"
+                   data-page="@i"
+                   class="page-link page-number px-4 py-2 rounded @((i == currentPage) ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                    @i
+                </a>
+            }
+            <span class="px-2">...</span>
+            <a href="#" data-page="@totalPages"
+               class="page-link page-number px-4 py-2 rounded @(totalPages == currentPage ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                @totalPages
+            </a>
+        }
+        else if (currentPage >= totalPages - 1)
+        {
+            // Trang gần cuối
+            <a href="#" data-page="1"
+               class="page-link page-number px-4 py-2 rounded @(currentPage == 1 ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                1
+            </a>
+            <span class="px-2">...</span>
+            for (int i = totalPages - 1; i <= totalPages; i++)
+            {
+                <a href="#"
+                   data-page="@i"
+                   class="page-link page-number px-4 py-2 rounded @((i == currentPage) ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                    @i
+                </a>
+            }
+        }
+        else
+        {
+            // Trang ở giữa
+            <a href="#" data-page="1"
+               class="page-link page-number px-4 py-2 rounded @(currentPage == 1 ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                1
+            </a>
+            <span class="px-2">...</span>
+
+            // Hiển thị các trang xung quanh trang hiện tại
+            for (int i = currentPage - 1; i <= currentPage + 1; i++)
+            {
+                if (i > 1 && i < totalPages) // Đảm bảo không hiển thị trang 1 và trang cuối nếu không cần
+                {
+                    <a href="#"
+                       data-page="@i"
+                       class="page-link page-number px-4 py-2 rounded @((i == currentPage) ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                        @i
+                    </a>
+                }
+            }
+
+            <span class="px-2">...</span>
+            <a href="#" data-page="@totalPages"
+               class="page-link page-number px-4 py-2 rounded @(totalPages == currentPage ? "bg-green-300 text-green-500" : "bg-gray-200 text-gray-800") hover:bg-green-500 hover:text-white">
+                @totalPages
+            </a>
+        }
+    }
+
+    @if (currentPage < totalPages)
+    {
+        <a href="#" data-page="@(currentPage + 1)" class="page-link nav-next px-3 py-2 rounded bg-gray-200 hover:bg-green-500 hover:text-white">»</a>
+    }
+</div>
+
+<script>
+    $(document).ready(function () {
+        $(document).on("click", ".page-link", function (e) {
+            e.preventDefault();
+            var page = $(this).data("page");
+
+            // Hiển thị loading
+            $("#loading").removeClass("hidden");
+            $("#postContainer").addClass("opacity-50 pointer-events-none");
+
+            $.ajax({
+                url: '@Url.Action("PostPageAjax", "Posts")',
+                type: 'GET',
+                data: { page: page },
+                success: function (response) {
+                    // Cập nhật nội dung mới vào container bài viết và phân trang
+                    $("#postContainer").html(response.html);
+                    $("#pagination").html(response.pagination);
+                    // Ẩn loading
+                    $("#loading").addClass("hidden");
+                    $("#postContainer").removeClass("opacity-50 pointer-events-none");
+                },
+                error: function () {
+                    // Hiển thị lỗi
+                    $("#loading").text("Đã có lỗi xảy ra!");
+                }
+            });
+        });
+    });
+</script>

@@ -1,0 +1,107 @@
+﻿@model QLyNhaHangTDeli.Models.ComplaintViewModel
+
+
+@{
+    ViewBag.Title = "Liên hệ";
+    Layout = "~/Views/Shared/_LayoutWeb.cshtml";
+}
+
+<div class="h-screen">
+
+    <section class="relative">
+        @{
+            string image4Url = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("ContactBanner", Url);
+        }
+        <img alt="Contact" class="w-full h-[200px] object-cover" src="@image4Url" />
+
+        <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center text-center text-white">
+
+            <p class="text-2xl text-gray-400 mt-10">
+                Hãy đóng góp ý kiến của bạn cho chúng tôi
+            </p>
+
+        </div>
+    </section>
+
+    <div class="w-full bg-white flex flex-col lg:flex-row items-start justify-center gap-8 px-6 py-5">
+
+        <!-- Map bên trái -->
+        <div class="w-full lg:w-1/2 h-[500px] rounded-lg overflow-hidden shadow-md py-5">
+            <iframe src="https://maps.google.com/maps?q=20.515879683235575,106.48966533906065&output=embed"
+                    style="height: 100%; border: 0; width : 100%;"
+                    frameborder="0"
+                    allowfullscreen>
+            </iframe>
+
+        </div>
+
+        <!-- Form góp ý bên phải -->
+        <div class="w-full lg:w-1/2 bg-white p-6 rounded-lg shadow-md mb-2">
+            <h2 class="text-2xl font-bold mb-4 text-center">Góp ý</h2>
+
+            <form action="@Url.Action("SubmitComplaint", "Complaints")" method="post" id="complaintForm" class="space-y-4">
+                @Html.AntiForgeryToken()
+
+                <!-- Tiêu đề -->
+                <div>
+                    <label for="subject" class="block font-medium mb-1">Tiêu đề</label>
+                    <input type="text" id="subject" name="Subject" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400" placeholder="Nhập tiêu đề khiếu nại" required>
+                </div>
+
+                <!-- Mã hoá đơn -->
+                @{
+                    var userID = ViewBag.UserID as string ?? "";
+                    var orderList = ViewBag.OrderList as List<SelectListItem>;
+                }
+                @if (userID == "QUEST001")
+                {
+                    <div>
+                        <label for="email" class="block font-medium mb-1">Email</label>
+                        <input type="text" id="email" name="Email" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400" placeholder="Nhập địa chỉ email" required>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <label for="orderId" class="block font-medium mb-1">Mã hoá đơn</label>
+                        <select id="orderId" name="OrderID" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400" required>
+                            <option value="">-- Chọn mã hóa đơn --</option>
+                            @foreach (var item in orderList)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                }
+
+                <!-- Nội dung -->
+                <div>
+                    <label for="description" class="block font-medium mb-1">Nội dung</label>
+                    <textarea id="description" name="Description" rows="5" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400" placeholder="Nhập nội dung khiếu nại..." required></textarea>
+                </div>
+
+                <!-- Gửi -->
+                <div>
+                    <button type="submit" class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition duration-200">
+                        Gửi khiếu nại
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: '@Html.Raw(TempData["Success"])'
+            });
+        </script>
+    }
+}
+

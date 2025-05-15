@@ -1,0 +1,85 @@
+﻿@model List<QLyNhaHangTDeli.Models.ModelView.DiscountCodeViewModel>
+<div class="h-[60vh]">
+    <h3 class="text-xl text-center">Danh sách mã giảm giá</h3>
+
+    <table class="w-full table-auto mt-5 text-center">
+        <thead>
+            <tr class="bg-white">
+                <th class="px-2 py-1 border">Mã giảm giá</th>
+                <th class="px-2 py-1 border">Giá trị</th>
+                <th class="px-2 py-1 border text-center"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var code in Model)
+            {
+                var amountDisplay = code.DiscountType == "Phần trăm"
+                    ? $"{code.DiscountAmount}%"
+                    : $"{code.DiscountAmount:N0} VNĐ";
+
+                <tr >
+                    
+                    <td class="px-2 py-1 ">@code.Code</td>
+                    <td class="px-2 py-1 ">@amountDisplay</td>
+                    <td class="px-2 py-1 text-center cursor-pointer">
+                        @if (!code.IsAssigned)
+                        {
+                            <a href="javascript:void(0)" class="assign-code text-green-600"
+                               data-customer-id="@code.CustomerID"
+                               data-code="@code.Code" title="Gán mã">
+                                <i class="fas fa-check text-green-600"></i> <!-- Chưa gán -->
+                            </a>
+
+                        }
+                        else
+                        {
+                            <a href="javascript:void(0)" class="unassign-code text-red-500"
+                               data-customer-id="@code.CustomerID"
+                               data-code="@code.Code" title="Gỡ mã">
+                                <i class="fas fa-times text-red-600"></i> <!-- Đã gán -->
+                            </a>
+
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).on('click', '.assign-code, .unassign-code', function () {
+        const isAssign = $(this).hasClass('assign-code');
+        const code = $(this).data('code');
+        const customerId = $(this).data('customer-id'); // Hoặc truyền theo cách khác nếu không dùng ViewBag
+
+        $.ajax({
+            url: isAssign ? '/DiscountCodes/AssignToCustomer' : '/DiscountCodes/RemoveFromCustomer',
+            method: 'POST',
+            data: {
+                customerId: customerId,
+                code: code
+            },
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire({
+                        title: 'Thành công',
+                        text: res.message,
+                        icon: 'success',
+                        timer: 2000, // Đặt thời gian tự động đóng sau 2 giây (2000ms)
+                        showConfirmButton: false, // Ẩn nút confirm
+                    }).then(() => {
+                        location.reload();
+                    });
+                    // Reload lại danh sách hoặc cập nhật UI
+                   
+                } else {
+                    Swal.fire('Lỗi', res.message, 'error');
+                }
+            },
+            error: function () {
+                Swal.fire('Lỗi', 'Không thể xử lý yêu cầu.', 'error');
+            }
+        });
+    });
+
+</script>

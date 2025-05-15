@@ -1,0 +1,410 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        Tdeli
+    </title>
+    @{
+        string imageUrl1 = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("logoIcon", Url);
+    }
+    <link rel="icon" href="@imageUrl1" type="image/png" />
+    <link href="~/Content/tailwind.css" rel="stylesheet" />
+
+    @*<script src="https://cdn.tailwindcss.com"></script>*@
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+    <style>
+
+        .dark {
+            background-color: #1a202c; /* Màu nền tổng thể */
+            color: white;
+        }
+
+            /* Sidebar */
+            .dark .bg-white {
+                background-color: #374151 !important;
+            }
+
+            /* Văn bản trong sidebar */
+            .dark .text-gray-700 {
+                color: #cbd5e0 !important;
+            }
+
+            /* Header */
+            .dark .border-b {
+                border-color: #1A202C !important;
+                background-color: #374151 !important;
+            }
+
+            /* Input search */
+            .dark input {
+                background-color: #4a5568 !important;
+                color: white !important;
+                border-color: #718096 !important;
+            }
+
+            /* Nút Dark Mode */
+            .dark #toggleDarkMode {
+                background-color: #1A202C !important;
+                color: white !important;
+            }
+
+            /* Nút Đăng xuất */
+            .dark .bg-red-500 {
+                background-color: #e53e3e !important;
+            }
+            /* Dark mode cho phần nội dung chính */
+            .dark .content {
+                background-color: #2d3748 !important; /* Nền tối */
+                color: white !important; /* Chữ trắng */
+            }
+
+            /* Dark mode cho Grid */
+            .dark .grid {
+                background-color: #2d3748 !important;
+            }
+
+            .dark #chatBox div.bg-blue-100 {
+                background-color: #2b6cb0 !important; /* Xanh đậm hơn */
+                color: white !important;
+            }
+
+            .dark #chatBox div.bg-gray-200 {
+                background-color: #4a5568 !important; /* Xám đậm */
+                color: white !important;
+            }
+
+        .invisible-scrollbar::-webkit-scrollbar {
+            width: 0px;
+            height: 0px;
+            display: none;
+        }
+
+        .invisible-scrollbar {
+            -ms-overflow-style: none; /* Ẩn scrollbar trên IE & Edge */
+            scrollbar-width: none; /* Ẩn scrollbar trên Firefox */
+        }
+    </style>
+
+</head>
+<body class="bg-white font-sans">
+
+    <div class="flex h-screen">
+        <div id="boxModal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg
+            w-full h-full md:w-1/2 md:h-auto md:rounded-xl md:p-4 overflow-y-auto">
+                <div class="flex justify-end">
+
+                    <div id="closeCreateModal" class="px-4 py-2  text-gray-500 rounded-lg">
+                        <i class="fas fa-times text-xl"></i>
+                    </div>
+                </div>
+
+
+                <!-- Nội dung form sẽ được load bằng Ajax -->
+                <div id="modalContent">
+
+                </div>
+
+
+            </div>
+        </div>
+        <!-- Overlay (mờ nền khi mở sidebar) -->
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden md:hidden transition-opacity duration-300 z-30"></div>
+
+        <!-- Sidebar -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 w-40 md:w-20 lg:w-40 bg-white shadow-md transform -translate-x-full md:translate-x-0 md:relative transition-all duration-300 z-50 flex flex-col h-screen">
+            <!-- Header -->
+            <div class="p-4 flex items-center border-b h-16">
+                <img alt="Logo" class="mr-2 w-8 h-8" src="https://storage.googleapis.com/a1aa/image/pKYOo-K3ouYHFHhUiDeGgM7HnayrH0QT84RyvvvnBCM.jpg" />
+                <span class="text-xl font-bold md:hidden lg:block">T-Deli</span>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="mt-6 flex-1">
+                <ul>
+                    @{
+                        var userRole = QLyNhaHangTDeli.Services.AuthHelper.GetOther().ToString() ?? "Nhân viên"; // Mặc định là "Nhân viên" nếu không có role
+                        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+
+                        string GetActiveClass(string controller, string action = "")
+                        {
+                            return (currentController == controller && (string.IsNullOrEmpty(action) || currentAction == action))
+                                ? "text-green-500 bg-green-100"
+                                : "hover:bg-green-100 hover:text-black transition duration-300";
+                        }
+                    }
+
+                    @if (userRole == "Quản lý")
+                    {
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Home", "ManagerIndex")" onclick="window.location='@Url.Action("ManagerIndex", "Home")'">
+                            <i class="fas fa-home mr-3 md:items-center flex"> </i>
+                            <p class="w-full md:hidden lg:block">Trang chủ</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Users", "NhanVien")" onclick="window.location='@Url.Action("NhanVien", "Users")'">
+                            <i class="fas fa-users mr-3"></i>
+                            <p href="" class="w-full md:hidden lg:block">Tài khoản</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Products", "ProductsView")" onclick="window.location='@Url.Action("ProductsView", "Products")'">
+                            <i class="fas fa-boxes mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Sản phẩm</p>
+                        </li>
+
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Posts", "PostManager")" onclick="window.location='@Url.Action("PostManager", "Posts")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Bài viết</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Orders", "OrderList")" onclick="window.location='@Url.Action("OrderList", "Orders")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Đơn hàng</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("DiscountCodes", "DiscountCodeManager")" onclick="window.location='@Url.Action("DiscountCodeManager", "DiscountCodes")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Giảm giá</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Complaints", "ComplaintList")" onclick="window.location='@Url.Action("ComplaintList", "Complaints")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Khiếu nại</p>
+                        </li>
+                    }
+                    else if (userRole == "Nhân viên")
+                    {
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Home", "EmployeeIndex")" onclick="window.location='@Url.Action("EmployeeIndex", "Home")'">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Trang chủ</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Orders", "OrdersView")" onclick="window.location='@Url.Action("OrdersView", "Orders")'">
+                            <i class="fas fa-boxes mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Hoá đơn</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Orders", "OrderList")" onclick="window.location='@Url.Action("OrderList", "Orders")'">
+                            <i class="fas fa-shopping-cart mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Đơn hàng</p>
+                        </li>
+                    }
+                    else if (userRole == "Thủ kho")
+                    {
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Home", "EmployeeIndex")" onclick="window.location='@Url.Action("EmployeeIndex", "Home")'">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Trang chủ</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Products", "ProductsView")" onclick="window.location='@Url.Action("ProductsView", "Products")'">
+                            <i class="fas fa-boxes mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Sản phẩm</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("DiscountCodes", "DiscountCodeManager")" onclick="window.location='@Url.Action("DiscountCodeManager", "DiscountCodes")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Giảm giá</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Users", "NhanVien")" onclick="window.location='@Url.Action("NhanVien", "Users")'">
+                            <i class="fas fa-users mr-3"></i>
+                            <p href="" class="w-full md:hidden lg:block">Tài khoản</p>
+                        </li>
+
+                    }
+                    else
+                    {
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Home", "EmployeeIndex")" onclick="window.location='@Url.Action("EmployeeIndex", "Home")'">
+                            <i class="fas fa-tachometer-alt mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Trang chủ</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Posts", "PostManager")" onclick="window.location='@Url.Action("PostManager", "Posts")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Bài viết</p>
+                        </li>
+                        <li class="cursor-pointer flex items-center p-4 @GetActiveClass("Complaints", "ComplaintList")" onclick="window.location='@Url.Action("ComplaintList", "Complaints")'">
+                            <i class="fas fa-chart-line mr-3"></i>
+                            <p class="w-full md:hidden lg:block">Khiếu nại</p>
+                        </li>
+                    }
+                </ul>
+            </nav>
+
+
+            <!-- Footer (Dark Mode Toggle + Logout) -->
+            <div class="p-4 space-y-4">
+                <!-- Toggle Dark Mode -->
+                <button id="toggleDarkMode" class="w-full flex items-center justify-center bg-gray-200 p-3 rounded-md">
+                    <i id="darkModeIcon" class="fas fa-moon text-gray-700 mr-2"></i>
+                    <span id="darkModeText" class="md:hidden lg:block">Tối</span>
+                </button>
+
+                <!-- Logout -->
+                <a href="@Url.Action("Logout", "Users")" class="w-full flex items-center justify-center bg-red-500 text-white p-3 rounded-md">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    <span class="md:hidden lg:block">Đăng xuất</span>
+                </a>
+            </div>
+        </div>
+
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- Header -->
+            <div class="relative flex justify-between items-center p-4 border-b h-16">
+                <button id="menuToggle" class="md:hidden text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <span class="font-bold p-2 w-80 hidden md:block">Hi, @(QLyNhaHangTDeli.Services.AuthHelper.GetFullName())</span>
+
+                <!-- Weather & Time center absolute -->
+                <div id="weather-time" class="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-sm">
+                    <span id="time" class="font-semibold"></span>
+                    <span class="text-xs text-gray-500 flex items-center gap-1">
+                        <i id="weather-icon" class="fas fa-sun text-yellow-400"></i>
+                        <span id="weather-text">Đang tải...</span>,
+                        <span id="temperature">--°C</span>
+                    </span>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                  
+                    <i class="fas fa-bell"></i>
+                    <a href="/Users/UserInfor">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                </div>
+            </div>
+
+
+            <!-- Content -->
+            <div class="flex-1  p-6 content  bg-gray-300 relative" style="overflow: hidden;">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+    
+    <!-- Script mở/đóng sidebar -->
+    <script>
+        $(document).ready(function () {
+
+
+
+          
+            const apiKey = "11414c48f6853befc28fc87fe69e336b"; // ← Thay bằng API key của bạn (OpenWeatherMap)
+
+
+
+            function updateTime() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                $('#time').text(`${timeStr} - ${dateStr}`);
+            }
+
+            function updateWeather(lat, lon) {
+                const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=vi`;
+
+                $.getJSON(url, function (data) {
+                    const weatherMain = data.weather[0].main;
+                    const description = data.weather[0].description;
+                    const temp = Math.round(data.main.temp);
+
+                    const iconMap = {
+                        'Clear': 'fa-sun',
+                        'Clouds': 'fa-cloud',
+                        'Rain': 'fa-cloud-showers-heavy',
+                        'Drizzle': 'fa-cloud-rain',
+                        'Thunderstorm': 'fa-bolt',
+                        'Snow': 'fa-snowflake',
+                        'Mist': 'fa-smog',
+                        'Haze': 'fa-smog',
+                        'Fog': 'fa-smog'
+                    };
+                    const iconClass = iconMap[weatherMain] || 'fa-question';
+
+                    $('#weather-icon').attr('class', `fas ${iconClass} text-yellow-400`);
+                    $('#weather-text').text(description.charAt(0).toUpperCase() + description.slice(1));
+                    $('#temperature').text(`${temp}°C`);
+                });
+            }
+
+            $(document).ready(function () {
+                updateTime();
+                setInterval(updateTime, 60000);
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+                            updateWeather(lat, lon);
+                        },
+                        function () {
+                            console.warn("Không lấy được vị trí, fallback về Hà Nội");
+                            updateWeather(21.0278, 105.8342); // Fallback: Hà Nội
+                        },
+                        {
+                            timeout: 5000
+                        }
+                    );
+                } else {
+                    console.warn("Trình duyệt không hỗ trợ geolocation, fallback về Hà Nội");
+                    updateWeather(21.0278, 105.8342); // Fallback: Hà Nội
+                }
+            }); // Gọi 1 lần khi load
+
+            const $sidebar = $("#sidebar");
+            const $overlay = $("#overlay");
+            const $menuToggle = $("#menuToggle");
+            const $toggleBtn = $("#toggleDarkMode");
+            const $icon = $("#darkModeIcon");
+            const $text = $("#darkModeText");
+
+            // Toggle sidebar
+            $menuToggle.on("click", function () {
+                $sidebar.toggleClass("-translate-x-full");
+                $overlay.toggleClass("hidden");
+            });
+
+            $overlay.on("click", function () {
+                $sidebar.addClass("-translate-x-full");
+                $overlay.addClass("hidden");
+            });
+
+            // Kiểm tra chế độ từ localStorage
+            const isDarkMode = localStorage.getItem("darkMode") === "enabled";
+            if (isDarkMode) {
+                $("html").addClass("dark");
+                $icon.removeClass("fa-moon").addClass("fa-sun");
+                $text.text("Sáng");
+            }
+
+            // Xử lý toggle dark mode
+            $toggleBtn.on("click", function () {
+                $("html").toggleClass("dark");
+                const isEnabled = $("html").hasClass("dark");
+
+                if (isEnabled) {
+                    localStorage.setItem("darkMode", "enabled");
+                    $icon.removeClass("fa-moon").addClass("fa-sun");
+                    $text.text("Sáng");
+                } else {
+                    localStorage.setItem("darkMode", "disabled");
+                    $icon.removeClass("fa-sun").addClass("fa-moon");
+                    $text.text("Tối");
+                }
+            });
+
+            // Đóng modal
+            $("#closeCreateModal").on("click", function () {
+                $("#boxModal").addClass("hidden");
+            });
+        });
+
+    </script>
+
+
+</body>
+
+
+</html>

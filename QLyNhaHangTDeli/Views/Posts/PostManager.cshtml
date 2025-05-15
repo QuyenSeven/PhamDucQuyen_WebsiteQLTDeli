@@ -1,0 +1,299 @@
+﻿
+@{
+    ViewBag.Title = "Bài viết";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .hidden-scrollbar {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* Internet Explorer 10+ */
+    }
+
+        .hidden-scrollbar::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+</style>
+<div >
+
+    <div class=" mx-auto flex justify-between space-x-2">
+        <!-- Main Content -->
+        <div class=" mx-auto p-4 w-full bg-white overflow-auto h-screen hidden-scrollbar" id="mainContainer">
+            <!-- Categories and Brands Buttons -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Thể loại</h2>
+            </div>
+            <!-- Categories List -->
+            <div class="flex space-x-4 overflow-x-auto pb-4 " id="scroll-container">
+                <div class="category-item flex-none text-center p-4 rounded shadow text-green-500 bg-green-100 cursor-default" data-id="all">
+                    <div class="text-gray-700">All</div>
+                    <div class="text-gray-500 text-sm"> bài</div>
+                </div>
+
+                <div class="category-item flex-none text-center p-4 rounded shadow cursor-default " data-id="Sản phẩm">
+                    <div class="text-gray-700">Sản phẩm</div>
+                    <div class="text-gray-500 text-sm"> bài</div>
+                </div>
+
+                <div class="category-item flex-none text-center p-4 rounded shadow cursor-default " data-id="Sự kiện">
+                    <div class="text-gray-700">Sự kiện</div>
+                    <div class="text-gray-500 text-sm"> bài</div>
+                </div>
+            </div>
+
+            <!-- New Grocery Products Section -->
+            <div class="mt-3">
+                <div class="flex items-center justify-between">
+
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold mb-2">
+                            Bài viết
+                        </h2>
+                        <button id="openPostModal" class="text-xl text-gray-500 mb-2 ml-2 hover:text-green-500 ">
+                            <i class="fas fa-plus"></i> <!-- Biểu tượng "plus" -->
+                        </button>
+
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button class="text-xl text-gray-700 p-2 mb-2 mr-2 hover:bg-green-200" id="list-view-btn">
+                            <i class="fas fa-th-list"></i> <!-- Biểu tượng danh sách -->
+                        </button>
+                        <button class="text-xl text-gray-700 p-2 mb-2 mr-2 hover:bg-green-200 bg-green-200" id="grid-view-btn">
+                            <i class="fas fa-th"></i> <!-- Biểu tượng lưới -->
+                        </button>
+
+                    </div>
+
+                </div>
+                <div id="searchContainer" class="flex items-center mb-4 z-10">
+                    <input id="searchInput" class="border border-gray-300 p-2 rounded w-full" placeholder="Search" type="text" />
+                </div>
+                <!-- Posts list -->
+                <div id="postGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 h-full mb-[6.25rem]">
+                </div>
+            </div>
+        </div>
+       
+       
+
+
+    </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        loadAllPosts();
+        loadPostCounts();
+
+        $('.category-item').click(function () {
+            $('.category-item').removeClass("text-green-500 bg-green-100").addClass("bg-white"); // Bỏ active cũ
+            $(this).addClass("text-green-500 bg-green-100").removeClass("bg-white"); // Đặt active cho mục được chọn
+        });
+
+        function loadAllPosts() {
+            $.ajax({
+                url: '/Posts/GetAllPosts', // Your endpoint for all products
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var postHtml = '';
+                    data.forEach(function (post) {
+                        //console.log(post.ImageUrl);
+                        const avgRating = post.AverageRating ?? null;
+                        console.log(avgRating);
+                        // Format date to "MMM dd, yyyy"
+                        postHtml += `
+                        <div data-id="${post.PostID}"  class=" openDetail relative group bg-white p-4 rounded shadow product-item">
+                            <div class="txt">
+                                <img alt="${post.PostTitle}" class="img-view w-full h-32 object-cover mb-2" src="${post.ImageUrl}" />
+                            </div>
+                            <div class="txt text-gray-700 truncate whitespace-nowrap overflow-hidden">
+                                ${post.Title}
+                            </div>
+                            <span class=" txt status inline-block w-fit px-2 py-1 rounded mx-auto ${post.PostType === 'Sản phẩm' ? 'bg-green-200 text-green-500' : 'bg-red-200 text-red-500'} ">
+                                ${post.PostType}
+                            </span>
+                                <div class="flex justify-between items-center text-gray-600 text-sm mt-2">
+                                <div class="flex items-center">
+                                    ${avgRating !== null ? `<span class="ml-2">${avgRating.toFixed(1) } sao</span>` : ''} <!-- Hiển thị giá trị trung bình đánh giá nếu có -->
+                                </div>
+                                   <span>${post.UpdatedAt}</span>
+                               </div>
+                              <div
+                                class="absolute inset-0 rounded z-10 opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-auto"
+                                style="
+                                    background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.1) 100%);
+                                ">
+
+                                <!-- Icon xoá hiện luôn khi hover vào lớp này -->
+
+                            </div>
+                        </div>
+                    `;
+                    });
+
+                    // Insert products into the #productGrid
+                    $('#postGrid').html(postHtml);
+                },
+                error: function () {
+                    alert('Error loading posts');
+                }
+            });
+        }
+
+        // Load all products when the page loads
+
+        $('#scroll-container').on('click', '.category-item', function () {
+            var categoryId = $(this).data('id'); // Lấy categoryId từ data attribute
+            //console.log(categoryId)
+            // Nếu là "All", gọi API lấy toàn bộ sản phẩm
+            var url = (categoryId === "all" || categoryId === undefined || categoryId === null)
+                ? '/Posts/GetAllPosts'
+                : '/Posts/GetPostsByCategory';
+
+            var data = (categoryId === "all" || categoryId === undefined || categoryId === null)
+                ? {} : { postType: categoryId };
+
+
+            // Gửi yêu cầu Ajax để lấy sản phẩm
+            $.ajax({
+                url: url, // Địa chỉ endpoint của API
+                method: 'GET',
+                data: data,
+                success: function (data) {
+
+                    var postHtml = '';
+                    data.forEach(function (post) {
+                        const avgRating = post.AverageRating ?? null;
+                        postHtml += `
+                            <div data-id="${post.PostID}"  class=" openDetail relative group bg-white p-4 rounded shadow product-item">
+                                <img alt="${post.Title}" class="img-view w-full h-32 object-cover mb-2" src="${post.ImageUrl}" />
+                                <div class="txt text-gray-700  truncate whitespace-nowrap overflow-hidden">
+                                    ${post.Title}
+                                </div>
+                                <span class=" txt status inline-block w-fit px-2 py-1 rounded ${post.PostType === 'Sản phẩm' ? 'bg-green-200 text-green-500' : 'bg-red-200 text-red-500'} ">
+                                    ${post.PostType}
+                                </span>
+                                <div class="flex justify-between items-center text-gray-600 text-sm mt-2">
+                                     <div class="flex items-center">
+                                         ${avgRating !== null ? `<span class="ml-2">${avgRating.toFixed(1)} sao</span>` : ''} <!-- Hiển thị giá trị trung bình đánh giá nếu có -->
+                                     </div>
+                                    <span>${post.UpdatedAt}</span>
+                                </div>
+                                 <div
+                                    class="absolute inset-0 rounded z-10 opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-auto"
+                                    style="
+                                        background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.1) 100%);
+                                    ">
+
+
+                                </div>
+
+                            </div>
+                        `;
+                    });
+
+                    // Insert products into the #productGrid
+                    $('#postGrid').html(postHtml);
+                },
+                error: function () {
+                    alert('Error loading posts');
+                }
+            });
+        });
+
+        $(document).on('click', '#openPostModal', function () {
+            $('#boxModal').removeClass('hidden');
+
+            $.ajax({
+                url: '/Posts/Create',
+                type: 'GET',
+                success: function (data) {
+                    $('#modalContent').html(data);
+                },
+                error: function () {
+                    $('#modalContent').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                }
+            });
+        });
+
+        $('#grid-view-btn').on('click', function () {
+            $(this).addClass('bg-green-200')
+            $('#list-view-btn').removeClass('bg-green-200')
+
+            // Thêm lớp bg-green-200 vào productGrid và hiển thị dạng lưới
+            $('#postGrid').addClass(' grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4')
+                .removeClass('table w-full text-left');
+
+            // Thêm các lớp cho sản phẩm nếu có
+            $('.product-item').addClass('p-4 rounded shadow').removeClass('flex justify-between  items-center my-auto px-4 ');
+            $('.product-item .txt').removeClass('w-1/3');
+
+            // Các lớp liên quan đến lưới
+
+            $('.product-item img').addClass('w-full h-32 object-cover').removeClass('w-32 h-16 object-contain')
+        });
+
+        // Khi click vào dạng danh sách
+        $('#list-view-btn').on('click', function () {
+            $(this).addClass('bg-green-200')
+            $('#grid-view-btn').removeClass('bg-green-200')
+            // Loại bỏ lớp bg-green-200 và chuyển sang dạng bảng
+            $('#postGrid').removeClass(' grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4')
+                .addClass('table w-full text-left');
+
+            // Loại bỏ các lớp liên quan đến lưới
+            $('.product-item').removeClass('p-4 rounded shadow').addClass('flex justify-between  items-center my-auto px-4 ');
+            $('.product-item .txt').addClass('w-1/3 ');  // Các lớp liên quan đến lưới;
+            $('.product-item img').addClass('w-32 h-16 object-contain').removeClass('w-full h-32 object-cover')
+        });
+
+        $(document).on('click', '.openDetail', function () {
+            var pId = $(this).data("id");
+
+            if (pId === undefined || pId === null) {
+                console.error("ID bài viết không hợp lệ.");
+                return; // Ngừng thực hiện nếu id không hợp lệ
+            }
+            window.location.href = '/Posts/Details/' + pId;
+
+        });
+
+        $('#searchInput').on('input', function () {
+            var searchTerm = $(this).val().toLowerCase(); // Lấy giá trị tìm kiếm, chuyển thành chữ thường
+            //console.log("Tìm kiếm: " + searchTerm);
+            // Lặp qua tất cả các sản phẩm trong #productGrid
+            $('#postGrid .product-item').each(function () {
+                var postName = $(this).find('.txt').text().toLowerCase(); // Lấy tên sản phẩm
+
+                // Kiểm tra nếu tên sản phẩm chứa từ khóa tìm kiếm
+                if (postName.indexOf(searchTerm) > -1) {
+                    $(this).show(); // Hiển thị sản phẩm nếu có kết quả khớp
+                } else {
+                    $(this).hide(); // Ẩn sản phẩm nếu không khớp
+                }
+            });
+        });
+
+        function loadPostCounts() {
+            $.get('/Posts/GetPostCountsByCategory', function (data) {
+                $('.category-item').each(function () {
+                    const categoryId = $(this).data('id');
+
+                    const count = data[categoryId];
+
+                    if (count !== undefined) {
+                        $(this).find('div.text-sm').text(`${count} bài`);
+                    } else {
+                        $(this).find('div.text-sm').text(`0 bài`);
+                    }
+                });
+            });
+        }
+
+
+    })
+</script>
+

@@ -1,0 +1,32 @@
+﻿@model List<QLyNhaHangTDeli.Models.Post>
+
+@foreach (var post in Model)
+{
+    <a href="@Url.Action("DetailsPost", "Posts", new { id = post.PostID })" class="post-item bg-white rounded-lg shadow-md overflow-hidden" data-id="@post.PostID">
+        @{
+            var imgUrl = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(post.ImageUrl, Url);
+        }
+        <img alt="@post.Title" class="w-full h-48 object-cover" src="@imgUrl" />
+        <div class="p-4">
+            <h2 class="text-xl font-bold mb-2 truncate whitespace-nowrap overflow-hidden">
+                <span >
+                    @post.Title
+                </span>
+            </h2>
+            <p class="text-gray-700 mb-4 truncate whitespace-nowrap overflow-hidden">@post.Summary</p>
+
+            <div class="flex items-center space-x-2 mb-4">
+                <span class="@((post.PostType == "Sản phẩm") ? "bg-green-500 text-white" : "bg-red-500 text-white") text-white px-2 py-1 rounded-full text-xs">
+                    @post.PostType
+                </span>
+            </div>
+            <div class="flex justify-between items-center text-gray-600 text-sm">
+                @if (post.AverageRating != null)
+                {
+                    <span class="ml-2">@post.AverageRating.Value.ToString("0.0") sao</span> <!-- Hiển thị trung bình sao -->
+                }
+                <span>@(post.UpdatedAt?.ToString("MMM dd, yyyy"))</span>
+            </div>
+        </div>
+    </a>
+}

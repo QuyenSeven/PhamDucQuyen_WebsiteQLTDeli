@@ -1,0 +1,296 @@
+﻿@model QLyNhaHangTDeli.Models.UserCustomerViewModel
+
+@{
+    ViewBag.Title = "NhanVien";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+    var userRole = QLyNhaHangTDeli.Services.AuthHelper.GetOther().ToString() ?? "Nhân viên";
+}
+
+
+<div class="bg-white shadow-md rounded-lg p-6">
+    <div class="mb-4 border-b border-gray-200">
+        <ul class="flex text-sm font-medium text-center w-full">
+            <li class="w-1/2">
+                <button class="tab-btn flex-1 w-full p-4 rounded-t-lg border-b-2 text-green-600 border-green-300 border-transparent hover:text-green-600 hover:border-green-300 text-xl active"
+                        data-tab="customerTab">
+                    Khách hàng
+                </button>
+            </li>
+            @if (userRole == "Quản lý")
+            {
+                <li class="w-1/2">
+                    <button class="tab-btn flex-1 w-full p-4 rounded-t-lg border-b-2  border-transparent hover:text-green-600 hover:border-green-300 text-xl "
+                            data-tab="employeeTab">
+                        Nhân viên
+                    </button>
+                </li>
+            }
+
+        </ul>
+    </div>
+    @if (userRole == "Quản lý")
+    {
+        <div id="employeeTab" class="tab-content hidden">
+
+            <div class="flex justify-start items-center mb-4">
+                <!-- Search -->
+                <!-- Icon trên mobile -->
+                <button class="lg:hidden p-2 text-gray-600" id="iconSearchBtn">
+                    <i class="fas fa-search"></i>
+                </button>
+
+                <!-- Input đầy đủ trên lg -->
+                <input id="searchInput"
+                       class="hidden lg:block border border-gray-300 rounded-lg p-2 w-full lg:w-1/3"
+                       placeholder="Tìm kiếm nhân viên"
+                       type="text" />
+
+
+                <!-- Thêm nhân viên -->
+                <div class="ml-5">
+                    <!-- Icon thêm trên mobile -->
+                    <button class="lg:hidden bg-green-500 hover:bg-green-600 text-white p-2 rounded" id="iconAddBtn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+
+                    <!-- Button đầy đủ trên lg -->
+                    <button id="openCreateModal"
+                            class="hidden lg:block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-green-300">
+                        Thêm nhân viên mới
+                    </button>
+                </div>
+            </div>
+
+
+            <div id="employeeTable">
+                @Html.Partial("_EmployeeTable", Model)
+            </div>
+        </div>
+    }
+    <!-- Nội dung tab Nhân viên -->
+    <!-- Nội dung tab Khách hàng -->
+    <div id="customerTab" class="tab-content">
+        <div class="mb-4">
+            <input id="searchCusInput" type="text" placeholder="Tìm kiếm khách hàng" class="border border-gray-300 rounded-lg p-2 w-full lg:w-1/3" />
+        </div>
+        <div class="mb-4 flex flex-wrap items-center gap-4">
+            <input type="checkbox" id="filterByMonth" class="accent-blue-600" />
+            <label for="filterByMonth" class="text-gray-700">Lọc theo tháng</label>
+
+            <select id="monthSelector" class="border border-gray-300 bg-white rounded-lg p-2">
+                @for (int m = 1; m <= 12; m++)
+                {
+                    <option value="@m">Tháng @m</option>
+                }
+            </select>
+        </div>
+
+        <div id="customerTable">
+            @Html.Partial("_CustomerTable", Model)
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+
+    $(document).ready(function () {
+        const $searchInput = $("#searchInput");
+        const currentMonth = new Date().getMonth() + 1; // Tháng từ 0 -> 11 nên cộng thêm 1
+        $('#monthSelector').val(currentMonth); // Set giá trị cho dropdown
+
+        // Bấm vào icon -> hiện input
+        $("#iconSearchBtn").on("click", function (e) {
+            e.stopPropagation(); // Ngăn không lan ra ngoài
+            $searchInput.removeClass("hidden").focus();
+        });
+
+        // Bấm vào input -> đừng ẩn
+        $searchInput.on("click", function (e) {
+            e.stopPropagation(); // Ngăn click lan ra ngoài
+        });
+
+        // Nếu click ra ngoài -> ẩn lại
+        $(document).on("click", function () {
+            $searchInput.addClass("hidden");
+        });
+    });
+
+    $(document).ready(function () {
+
+        $(".tab-btn").on("click", function () {
+            // Ẩn tất cả tab content
+            $(".tab-content").addClass("hidden");
+
+            // Bỏ active tất cả button
+            $(".tab-btn").removeClass("active text-green-600 border-green-300");
+            $(this).addClass("active text-green-600 border-green-300");
+
+
+            // Hiện tab được chọn
+            const tabId = $(this).data("tab");
+            $("#" + tabId).removeClass("hidden");
+
+            // Đánh dấu active cho nút
+            $(this).addClass("active text-blue-600 border-blue-300");
+        });
+
+        // Hiện ô tìm kiếm khi bấm icon
+
+        $("#iconAddBtn").on("click", function () {
+            $("#openCreateModal").trigger("click");
+        });
+
+        // Khi nhấn icon search (mobile) có thể focus vào input
+
+        // Xử lý sự kiện tìm kiếm
+        $("#searchInput").on("input", function () {
+            var keyword = $(this).val();  // Lấy từ khóa từ ô input
+            //console.log("input " + keyword); // Debug xem giá trị nhập vào
+
+            $.ajax({
+                url: '/Users/Search',  // Đảm bảo gọi đúng Controller và Action
+                type: 'GET',
+                data: {
+                    keyword: keyword,
+                    type: 'user' // <--- thêm loại đối tượng
+                }, // Truyền từ khóa vào API
+                success: function (data) {
+                    $("#employeeTable").html(data); // Cập nhật bảng
+                },
+                error: function () {
+                    console.error("Lỗi khi gọi API tìm kiếm!");
+                }
+            });
+        });
+
+        $("#searchCusInput").on("input", function () {
+            var keyword = $(this).val();  // Lấy từ khóa từ ô input
+            //console.log("input " + keyword); // Debug xem giá trị nhập vào
+
+            $.ajax({
+                url: '/Users/Search',  // Đảm bảo gọi đúng Controller và Action
+                type: 'GET',
+                data: {
+                    keyword: keyword,
+                    type: 'customer' // <--- thêm loại đối tượng
+                }, // Truyền từ khóa vào API
+                success: function (data) {
+                    $("#customerTable").html(data); // Cập nhật bảng
+                },
+                error: function () {
+                    console.error("Lỗi khi gọi API tìm kiếm!");
+                }
+            });
+        });
+
+          $("#statusFilter").change(function () {
+            var selectedStatus = $(this).val(); // Lấy giá trị trạng thái
+
+            $.ajax({
+                url: '@Url.Action("FilterByStatus", "Users")',
+                type: 'GET',
+                data: { status: selectedStatus },
+                success: function (data) {
+                    $("#employeeTable").html(data); // Cập nhật bảng nhân viên
+                }
+            });
+        });
+
+
+         // Khi bấm nút "Thêm nhân viên mới"
+        $("#openCreateModal").click(function () {
+              $.ajax({
+                  url: '@Url.Action("Create", "Users")', // Lấy form từ server
+                  type: 'GET',
+                  success: function (data) {
+                      $("#modalContent").html(data); // Hiển thị form trong modal
+                      $("#boxModal").removeClass("hidden"); // Hiện modal
+                  }
+              });
+        });
+
+        // Mở modal khi nhấn nút Edit
+           $(".openEditModal").click(function () {
+               var userId = $(this).data("id");
+              // console.log("Button data-id:", $(this).data("id"));
+
+                $.ajax({
+                    url: '@Url.Action("Edit", "Users")',
+                    type: 'GET',
+                    data: { id: userId },
+                    success: function (data) {
+                        $("#modalContent").html(data);
+                        $("#boxModal").removeClass("hidden");
+                    }
+                });
+           });
+
+           // click nút check
+
+            $(".approve-btn").click(function () {
+                 var userId = $(this).data("id"); // Lấy ID của user
+
+                 $.ajax({
+                     url: '@Url.Action("ApproveUser", "Users")',
+                     type: "POST",
+                     data: { id: userId },
+                     success: function (response) {
+                         if (response.success) {
+                             Swal.fire("Thành công!", response.message, "success").then(() => {
+                                 location.reload(); // Tải lại trang sau khi cập nhật
+                             });
+                         } else {
+                             Swal.fire("Lỗi!", response.message, "error");
+                         }
+                     },
+                     error: function () {
+                         Swal.fire("Lỗi!", response.message, "error");
+                     }
+                 });
+            });
+
+
+           // Bấm nút xoá
+           $(".delete-btn").click(function () {
+               var userId = $(this).data("id");
+
+               Swal.fire({
+                   title: "Bạn có chắc muốn xóa?",
+                   text: "Hành động này không thể hoàn tác!",
+                   icon: "warning",
+                   showCancelButton: true,
+                   confirmButtonColor: "#d33",
+                   cancelButtonColor: "#3085d6",
+                   confirmButtonText: "Xóa",
+                   cancelButtonText: "Hủy"
+               }).then((result) => {
+                   if (result.isConfirmed) {
+                       $.ajax({
+                           url: '@Url.Action("DeleteConfirmed", "Users")',
+                           type: "POST",
+                           data: { id: userId },
+
+                           success: function (response) {
+                               if (response.success) {
+                                   Swal.fire("Đã xóa!", "Người dùng đã bị xóa.", "success")
+                                       .then(() => location.reload()); // Reload sau khi xóa
+                               } else {
+                                   Swal.fire("Lỗi!", response.message, "error");
+                               }
+                           },
+                           error: function () {
+                               Swal.fire("Lỗi!", "Có lỗi xảy ra!", "error");
+                           }
+                       });
+                   }
+               });
+           });
+
+
+
+    });
+</script>

@@ -1,0 +1,406 @@
+﻿@model List<QLyNhaHangTDeli.Models.OrderDetail>
+
+
+<div class="max-w-md mx-auto bg-white p-3 rounded-lg shadow-lg">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">
+            Hoá đơn
+        </h2>
+        <button class="bg-green-100 text-green-600 px-4 py-1 rounded-lg flex items-center">
+            <i class="fas fa-receipt mr-2">
+            </i>
+            @{
+                var orderDetail = Model.FirstOrDefault();
+                var orderIdSubstring = orderDetail != null
+                    ? orderDetail.OrderID.ToString().Substring(Math.Max(0, orderDetail.OrderID.ToString().Length - 3)).PadLeft(3, '0')
+                    : "000"; // Mặc định "000" nếu orderDetail là null
+            }
+
+            Đơn : @orderIdSubstring
+        </button>
+    </div>
+    <div class="flex mb-2 h-[40px]">
+        <input id="OrderInput" class="flex-grow border border-gray-300 p-1 w-2/3 rounded-l-lg" placeholder="Tìm kiếm sản phẩm ..." type="text" />
+
+        <button id="btnClearOrder" class="bg-orange-500 text-white px-4 py-1 w-1/3 ml-2 rounded-lg">
+            Xoá
+        </button>
+    </div>
+    <table class="w-full table-fixed">
+        <thead class="sticky top-0 z-10">
+            <tr>
+                <th class="w-[35%] pb-2 text-left ">Sản phẩm</th>
+                <th class="w-[25%] pb-2 text-center">Số lượng</th>
+                <th class="w-[30%] pb-2 text-center">Giá</th>
+                <th class="w-[10%] pb-2"></th>
+            </tr>
+        </thead>
+    </table>
+    <div class="h-[35vh] overflow-y-auto invisible-scrollbar">
+        <table class="w-full table-fixed" id="tableOrder">
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="border-b" data-id="@item.OrderDetailID">
+                        <td class="w-[40%] py-2 align-top ">@item.Product.ProductName</td>
+                        <td class="w-[20%] py-2 align-top">
+                            <div class="flex justify-center items-center quantity-control" data-id="@item.OrderDetailID">
+                                <button class="btn-decrease  px-2 py-1">-</button>
+                                <span class="px-2 quantity-value">@item.Quantity</span>
+                                <button class="btn-increase  px-2 py-1">+</button>
+                            </div>
+                        </td>
+                        <td class="w-[30%] py-2 text-red-500 align-top text-center">
+                            @String.Format("{0:N0}", item.Product.Price) ₫
+                        </td>
+                        <td class="w-[10%] py-2 align-top text-center">
+                            <button class="text-red-500 delete-order-item-btn" data-id="@item.OrderDetailID">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mb-2">
+        <div class="flex justify-between py-1">
+            <span>
+                Tổng số lượng:
+            </span>
+            <span id="totalQty">
+                @Model.Sum(item => item.Quantity)
+            </span>
+        </div>
+        <div class="flex justify-between py-1">
+            <span>
+                Tổng tiền:
+            </span>
+            <span  id="totalPrice">
+                @String.Format("{0:N0}", Model.Sum(item => item.Quantity * item.Product.Price)) ₫
+            </span>
+        </div>
+        <div class="flex justify-between py-1">
+            <span>
+                Giảm giá :
+            </span>
+            <span>
+                @String.Format("{0:N0}",@*Model.FirstOrDefault()?.Discount ??*@  0) ₫
+            </span>
+        </div>
+
+        <div class="flex justify-between py-1 font-semibold">
+            <span>
+                Thành tiền :
+            </span>
+            <span id="finalPrice">
+                @String.Format("{0:N0}", Model.Sum(item => item.Quantity * item.Product.Price) - (@*Model.FirstOrDefault()?.Discount ??*@  0)) ₫
+            </span>
+        </div>
+    </div>
+    <div class="flex justify-between">
+        <button id="paymentButton" class="border border-green-400  px-4 py-2 rounded-lg w-1/2 ml-2 hover:bg-green-700 hover:text-white">
+            Thanh toán
+        </button>
+        <button  class="bg-green-500 text-white px-4 py-2 rounded-lg w-1/2 ml-2 hover:bg-blue-700" id="printReceiptBtn">
+            Biên lai
+        </button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#OrderInput").on("keyup", function () {
+            var keyword = $(this).val().toLowerCase();
+
+            $("#tableOrder tbody tr").each(function () {
+                var productName = $(this).find("td").eq(0).text().toLowerCase(); // cột sản phẩm
+                if (productName.includes(keyword)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        $("#btnClearOrder").on("click", function () {
+              const orderId = $('#orderDetailBtn').data('order-id');
+            Swal.fire({
+                title: "Xác nhận xoá?",
+                text: "Bạn có chắc muốn xoá tất cả sản phẩm khỏi đơn?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Xoá",
+                cancelButtonText: "Huỷ"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "/Orders/ClearOrderDetails",
+                        type: "POST",
+                        data: {
+                            orderId: orderId
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Đã xoá!', '', 'success').then(() => {
+
+                                    // Xoá các dòng trong tbody
+                                    $("#tableOrder tbody").html(`<tr><td colspan="4" class="text-center py-4 text-gray-500">Không có sản phẩm nào</td></tr>`);
+
+                                    // Reset các thông tin tổng
+                                    $("#totalQty").text("0");
+                                    $("#totalPrice").text("0₫");
+                                    $("#finalPrice").text("0₫");
+                                    loadIconOrder(res.id);
+                                });
+                            } else {
+                                Swal.fire("Lỗi", "Không thể xoá sản phẩm", "error");
+                            }
+                        }
+                    });
+                }
+            });
+          });
+
+        $(".btn-increase").on("click", function () {
+            const orderId = $('#orderDetailBtn').data('order-id');
+            const container = $(this).closest(".quantity-control");
+            const orderDetailId = container.data("id");
+
+            $.post("/Orders/IncreaseQuantity", { id: orderDetailId, orderId: orderId }, function (res) {
+                if (res.success) {
+                    container.find(".quantity-value").text(res.newQuantity);
+                    updateTotals(res.totalQuantity, res.totalPrice, res.finalPrice);
+                } else {
+                    Swal.fire("Lỗi", res.message || "Không thể tăng số lượng", "error");
+                }
+            });
+        });
+
+        $(".btn-decrease").on("click", function () {
+            const orderId = $('#orderDetailBtn').data('order-id');
+            const container = $(this).closest(".quantity-control");
+            const orderDetailId = container.data("id");
+
+            $.post("/Orders/DecreaseQuantity", { id: orderDetailId, orderId: orderId }, function (res) {
+                if (res.success) {
+                    container.find(".quantity-value").text(res.newQuantity);
+                    updateTotals(res.totalQuantity, res.totalPrice, res.finalPrice);
+                } else {
+                    Swal.fire("Lỗi", res.message || "Không thể giảm số lượng", "error");
+                }
+            });
+        });
+
+        function updateTotals(totalQty, totalPrice, finalPrice) {
+                    $("#totalQty").text(totalQty);
+                    $("#totalPrice").text(totalPrice + "₫");
+                    $("#finalPrice").text(finalPrice + "₫");
+                }
+         $(document).on('click', '.delete-order-item-btn', function () {
+            const id = $(this).data('id');
+
+            Swal.fire({
+                title: 'Bạn có chắc muốn xoá sản phẩm này?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Xoá',
+                cancelButtonText: 'Huỷ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Orders/DeleteOrderDetail',
+                        method: 'POST',
+                        data: { id: id },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Đã xoá!', '', 'success').then(() => {
+
+                               
+
+                                $(`tr[data-id="${id}"]`).remove();
+
+                                // Kiểm tra xem bảng còn sản phẩm không
+                                if ($("#tableOrder tbody tr").length === 0) {
+                                    $("#tableOrder tbody").html(`<tr><td colspan="4" class="text-center py-4 text-gray-500">Không có sản phẩm nào</td></tr>`);
+                                }
+
+                                // Reset lại tổng số lượng và giá (tùy theo res trả về)
+                                    updateTotals(res.totalQuantity, res.totalPrice, res.finalPrice);
+                                    
+
+                                // Nếu cần, gọi lại loadIconOrder
+                                    loadIconOrder(res.orderId);
+                                });
+                            } else {
+                                Swal.fire('Lỗi!', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Lỗi!', 'Không thể xoá sản phẩm.', 'error');
+                        }
+                    });
+                }
+            });
+         });
+
+        
+            $('#printReceiptBtn').click(function () {
+               const orderId = $('#orderDetailBtn').data('order-id');// Lấy OrderID từ model
+
+                // Gửi AJAX để lấy chi tiết đơn hàng
+                $.ajax({
+                    url: '/Orders/GetReceipt',  // URL đến Action để lấy biên lai
+                    type: 'GET',
+                    data: { orderId: orderId }, // Gửi OrderID
+                    success: function (response) {
+                        if (response.success) {
+                            // Mở một cửa sổ mới chứa biên lai
+                            var printWindow = window.open('', '_blank');
+                            printWindow.document.write('<html><head><title>Biên lai</title>');
+                            printWindow.document.write('<style>');
+                            printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; width: 300px; margin: 0 auto; text-align: center; }');
+                            printWindow.document.write('h1 { font-size: 24px; font-weight: bold; margin-bottom: 10px; }');
+                            printWindow.document.write('h3 { font-size: 18px; margin-top: 10px; font-weight: normal; }');
+                            printWindow.document.write('p { font-size: 14px; margin: 5px 0; text-align: left; }');
+                            printWindow.document.write('ul { padding-left: 0; font-size: 14px; list-style-type: none; margin-bottom: 20px; text-align: left; }');
+                            printWindow.document.write('li { margin-bottom: 5px; display: flex; justify-content: space-between; }');
+                            printWindow.document.write('.total { font-weight: bold; font-size: 14px; margin-top: 20px; text-align: right; }');
+                            printWindow.document.write('.header { font-size: 14px; font-weight: bold; margin-bottom: 10px; text-align: left; }');
+                            printWindow.document.write('.item { font-size: 14px; }');
+                            printWindow.document.write('.item-name { width: 40%; text-align: left; word-break: break-word; white-space: normal; }');
+                            printWindow.document.write('.item-qty { width: 15%; text-align: center; }');
+                            printWindow.document.write('.item-price { width: 20%; text-align: left; }');
+                            printWindow.document.write('.item-total { width: 25%; text-align: right; }');
+                            printWindow.document.write('.line { border-top: 1px dashed #000; margin: 10px 0; }');
+                            printWindow.document.write('.discount { font-size: 14px; font-weight: bold; text-align: right; }');
+                            printWindow.document.write('.total-footer { font-weight: bold; font-size: 14px; margin-top: 5px; text-align: right; }');
+                            printWindow.document.write('</style></head><body>');
+
+                            printWindow.document.write('<h1>Biên lai</h1>');
+                            printWindow.document.write('<h3>Đơn hàng #' + response.orderId + '</h3>');
+                            printWindow.document.write('<p><strong>Ngày tạo:</strong> ' + response.createdAt + '</p>');
+                            printWindow.document.write('<div class="line"></div>');
+
+                            printWindow.document.write('<div class="header">Chi tiết đơn hàng:</div>');
+                            printWindow.document.write('<ul>');
+                            function formatCurrency(number) {
+                                return number.toLocaleString('vi-VN') + '₫';
+                            }
+
+                            // Tiêu đề cột: Sản phẩm, Số lượng, Thành tiền
+                            printWindow.document.write(`
+                              <li>
+                                <span class="item item-name"><strong>Sản phẩm</strong></span>
+                                <span class="item item-qty"><strong>SL</strong></span>
+                                <span class="item item-price"><strong>Giá</strong></span>
+                                <span class="item item-total"><strong>Thành tiền</strong></span>
+                              </li>
+                            `);
+
+
+                            response.orderDetails.forEach(function (item) {
+                                if (item.ProductName && item.Quantity && item.Price) {
+                                    var total = item.Quantity * item.Price;
+                                    printWindow.document.write(`
+                                      <li>
+                                        <span class="item item-name">${item.ProductName}</span>
+                                        <span class="item item-qty">${item.Quantity}</span>
+                                        <span class="item item-price">${formatCurrency(item.Price)}</span>
+                                        <span class="item item-total">${formatCurrency(total)}</span>
+
+                                      </li>
+                                    `);
+                                } else {
+                                    printWindow.document.write('<li><span class="item">Thông tin sản phẩm không đầy đủ</span></li>');
+                                }
+                            });
+
+                            printWindow.document.write('</ul>');
+                            printWindow.document.write('<div class="line"></div>');
+
+                            // Hiển thị giảm giá nếu có
+                            
+
+                            // Hiển thị tổng tiền và Tiền phải trả
+                            printWindow.document.write('<p class="total">Tổng tiền: ' + formatCurrency(response.totalPrice) + '</p>');
+                            printWindow.document.write('<p class="discount">Giảm giá: -' + formatCurrency(response.discount) + '</p>');
+                            printWindow.document.write('<div class="line"></div>');
+
+                            printWindow.document.write('<p class="total-footer">Tiền phải trả: ' + formatCurrency(response.finalPrice) + '</p>');
+
+                           
+                            printWindow.document.write('</body></html>');
+
+                            printWindow.document.close();  // Đóng cửa sổ in
+                            printWindow.print();
+
+
+
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi',
+                                text: 'Không thể lấy biên lai.'
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi',
+                            text: 'Không thể lấy biên lai.'
+                        });
+                    }
+                });
+            });
+
+
+            // Hiển thị modal khi nhấn vào nút "Thanh toán"
+            $('#paymentButton').on('click', function () {
+                const orderId = $('#orderDetailBtn').data('order-id');
+                $('#boxModal').removeClass('hidden');  // Mở modal
+
+
+                // Gọi đến controller và trả về PartialView
+                $.ajax({
+                    url: '/Orders/GetPayment',  // Đường dẫn đến action trong controller
+                    type: 'GET',
+                    data: { orderId: orderId },
+                    success: function (data) {
+                        $('#modalContent').html(data);  // Chèn nội dung trả về vào trong modal
+                    },
+                    error: function () {
+                        alert('Có lỗi xảy ra khi tải dữ liệu.');
+                    }
+                });
+            });
+
+
+
+        function loadIconOrder(orderId) {
+
+            $.get('/Orders/GetProductCount', { orderId: orderId }, function (res) {
+                const badge = `
+                 <span class="order-badge absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                     ${res.count}
+                 </span>`;
+
+                $(".view-order-detail-btn .order-badge").remove();
+                if (res.success && res.count > 0) {
+                   
+                    $(".view-order-detail-btn").append(badge);
+                }
+
+                   
+
+            });
+        }
+
+    });
+
+
+</script>
+
+

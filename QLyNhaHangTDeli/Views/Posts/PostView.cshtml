@@ -1,0 +1,65 @@
+﻿@model List<QLyNhaHangTDeli.Models.Post>
+
+
+@{
+    ViewBag.Title = "PostView";
+    Layout = "~/Views/Shared/_LayoutWeb.cshtml";
+}
+
+<div class="font-roboto bg-gray-100 overflow-auto invisible-scrollbar h-full">
+
+    <section class="relative">
+        @{
+            string image2Url = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("PostBanner", Url);
+        }
+        <img alt="A person looking through a telescope" class="w-full h-96 object-cover" src="@image2Url" />
+        <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center text-center text-white">
+            <span class="bg-green-500 px-2 py-1 rounded-full text-xl">
+                TDeli
+            </span>
+            <h1 class="text-4xl font-bold mt-2">
+                Tận hưởng cuộc sống
+            </h1>
+            <p class="text-lg mt-2">
+                Thưởng thức những tách trà và cà phê mang đầy hương vị Việt Nam
+            </p>
+        </div>
+    </section>
+    <section class="container mx-auto px-4 py-8">
+        <form method="get" action="@Url.Action("PostView")" class="flex justify-between items-center mb-6">
+            <div class="hidden md:flex space-x-4">
+                <span class="text-gray-800 font-semibold">Bài viết:</span>
+                <a class="@(ViewBag.Type == "" ? "text-purple-700" : "text-gray-800") font-semibold" href="@Url.Action("PostView", new { type = "", search = ViewBag.Search })">Tất cả</a>
+                <a class="@(ViewBag.Type == "Sản phẩm" ? "text-purple-700" : "text-gray-800") font-semibold" href="@Url.Action("PostView", new { type = "Sản phẩm", search = ViewBag.Search })">Sản phẩm</a>
+                <a class="@(ViewBag.Type == "Sự kiện" ? "text-purple-700" : "text-gray-800") font-semibold" href="@Url.Action("PostView", new { type = "Sự kiện", search = ViewBag.Search })">Sự kiện</a>
+            </div>
+            <div class="relative ml-auto">
+                <input name="search" value="@ViewBag.Search" class="border border-gray-300 rounded-full px-4 py-2" placeholder="Search..." type="text" />
+                <button class="absolute right-2 top-2 text-purple-700 hidden" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+        </form>
+        <div id="loading" class="hidden text-center my-6 text-purple-700 font-semibold">
+            Đang tải bài viết...
+        </div>
+        <div id="postContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+           @Html.Partial("_PostPartial", Model)
+        </div>
+        <div id="pagination" class="mt-8 flex justify-center space-x-2">
+            @Html.Partial("_PaginationPartial", ViewData["PaginationModel"])
+        </div>
+
+
+
+
+    </section>
+</div>
+
+<script>
+   
+</script>
+
+
+

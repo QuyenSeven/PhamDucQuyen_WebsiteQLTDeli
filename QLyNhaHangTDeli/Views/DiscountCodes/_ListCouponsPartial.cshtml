@@ -1,0 +1,38 @@
+﻿
+@model List<QLyNhaHangTDeli.Models.DiscountCode>
+
+<table class="w-full table-auto overflow-y-auto invisible-scrollbar mt-5">
+    <thead>
+        <tr class="bg-green-200">
+            <th class="px-2 py-1 border">Mã</th>
+            <th class="px-2 py-1 border">Giá trị</th>
+            <th class="px-2 py-1 border">Điều kiện (min/ max)</th>
+            <th class="px-2 py-1 border">Ngày hết hạn</th>
+            <th class="px-2 py-1 border">số lượng</th>
+
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            var amountDisplay = c.DiscountType == "Phần trăm"
+            ? $"{c.DiscountAmount}%"
+            : $"{c.DiscountAmount:N0} VNĐ";
+            <tr class="text-center">
+                <td class="px-2 py-1 ">@c.Code</td>
+                <td class="px-2 py-1 ">@amountDisplay</td>
+                <td class="px-2 py-1">@($"{c.MinimumOrderValue} / {c.MaxDiscountAmount}")</td>
+                <td class="px-2 py-1 ">@(c.ExpiryDate.ToString("dd/MM/yyyy"))</td>
+                @if (c.UsageLimit.HasValue)
+                {
+                    <td class="px-2 py-1 ">@($"{c.UsedCount ?? 0} / {c.UsageLimit}")</td>
+                }
+                else
+                {
+                    <td class="px-2 py-1"></td>
+                }
+
+            </tr>
+        }
+    </tbody>
+</table>

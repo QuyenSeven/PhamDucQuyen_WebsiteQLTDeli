@@ -1,0 +1,60 @@
+﻿@model List<QLyNhaHangTDeli.Models.Product>
+
+    <div class="bg-white text-gray-800">
+        <div class="container mx-auto py-12">
+            <h1 class="text-4xl font-semibold text-center text-yellow-600">
+                Các sản phẩm của cửa hàng
+            </h1>
+            <p class="text-center text-gray-500 mt-2">
+                Bạn có thể tự tay tạo ra các siêu phẩm cho riêng mình
+            </p>
+
+            <!-- Swiper -->
+            <div class="swiper myPrdSwiper mt-8">
+                <div class="swiper-wrapper">
+                    @foreach (var product in Model)
+                    {
+                        <div class="swiper-slide text-center">
+                            <img alt="@product.ProductName"
+                                 class="mx-auto rounded-lg w-[200px] h-[200px]"
+                                 src="@QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(product.ImageURL, Url)" />
+                            <h2 class="mt-4 text-lg font-medium"><a href="/Products/MenuView?productId=@(product.ProductID)">@product.ProductName</a></h2>
+                            <p class="text-yellow-600 mt-2">@string.Format("{0:N0}", product.Price) VNĐ</p>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                <div class="swiper-prw-pagination mt-6 text-center"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const swiperProduct = new Swiper(".myPrdSwiper", {
+        slidesPerView: 4,
+        spaceBetween: 20,
+        autoplay: {
+            delay: 2000,
+            disableOnInteraction: false,
+        },
+        autoHeight: true,
+        pagination: {
+            el: ".swiper-prw-pagination",
+            clickable: true,
+            type: 'bullets',
+        },
+        breakpoints: {
+            0: {
+                slidesPerView: 1,
+            },
+            640: {
+                slidesPerView: 2,
+            },
+            1024: {
+                slidesPerView: 4,
+            },
+        },
+    });
+</script>
+

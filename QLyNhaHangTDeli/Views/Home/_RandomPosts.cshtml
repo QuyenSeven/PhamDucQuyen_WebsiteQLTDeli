@@ -1,0 +1,24 @@
+﻿@model List<QLyNhaHangTDeli.Models.Post>
+
+<div class="swiper-wrapper h-[300px]">
+    @foreach (var post in Model)
+    {
+        var imgUrl = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(post.ImageUrl, Url);
+        <div class="swiper-slide">
+            <div class="flex items-center space-x-4  bg-gray-500 bg-opacity-10 rounded-lg shadow p-4">
+                <img src="@imgUrl" alt="Post Image"
+                     class="w-32 h-32 object-cover rounded-lg" />
+
+                <div class="flex-1">
+                    <h3 class="text-xl font-semibold text-white truncate">
+                        <a href="@Url.Action("DetailsPost", "Posts", new { id = post.PostID })">
+                            @post.Title
+                        </a>
+                    </h3>
+                    <p class="text-white mt-2 line-clamp-3">@post.Summary</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+

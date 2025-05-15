@@ -1,0 +1,84 @@
+﻿@model QLyNhaHangTDeli.Models.User
+
+@using (Html.BeginForm("Edit", "Users", FormMethod.Post, new { id = "editEmployeeForm" }))
+{
+    @Html.AntiForgeryToken()
+    <h2 class="text-lg font-bold mb-4">Chỉnh sửa nhân viên</h2>
+
+    <input type="hidden" name="UserID" value="@Model.UserID" />
+    <input type="hidden" name="PasswordHash" value="@Model.PasswordHash" />
+    <input type="hidden" name="CreateAt" value="@Model.CreatedAt" />
+
+    <div class="mb-4">
+        <label class="block text-gray-700">Họ tên</label>
+        <input type="text" class="border border-gray-300 rounded-lg p-2 w-full bg-gray-100" name="FullName"
+               value="@Model.FullName" readonly>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-gray-700">Liên hệ</label>
+        <input type="text" class="border border-gray-300 rounded-lg p-2 w-full bg-gray-100" name="ContactInfo"
+               value="@Model.ContactInfo" readonly>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-gray-700">Chức vụ</label>
+        <select name="Role" class="border border-gray-300 rounded-lg p-2 w-full bg-white">
+            <option value="Nhân viên" @(Model.Role == "Nhân viên" ? "selected" : "")>Nhân viên</option>
+            <option value="Thủ kho" @(Model.Role == "Thủ kho" ? "selected" : "")>Thủ kho</option>
+            <option value="CSKH" @(Model.Role == "CSKH" ? "selected" : "")>CSKH</option>
+        </select>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-gray-700">Trạng thái</label>
+        <select name="Status" class="border border-gray-300 rounded-lg p-2 w-full bg-white">
+            <option value="Hoạt động" @(Model.Status == "Hoạt động" ? "selected" : "")>Hoạt động</option>
+            <option value="Đợi phê duyệt" @(Model.Status == "Đợi phê duyệt" ? "selected" : "")>Đợi phê duyệt</option>
+        </select>
+    </div>
+
+    <div class="flex justify-end space-x-2">
+        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg mx-auto">Lưu</button>
+    </div>
+
+}
+<script>
+        // Gửi form bằng AJAX khi nhấn Lưu
+        $(document).ready(function () {
+            $(document).on("submit", "#editEmployeeForm", function (event) {
+                event.preventDefault();
+                Swal.fire({
+                    title: "Xác nhận lưu?",
+                    text: "Bạn có chắc chắn muốn cập nhật thông tin này?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Lưu",
+                    cancelButtonText: "Hủy"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '@Url.Action("Edit", "Users")',
+                            type: "POST",
+                            headers: {
+                                "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            data: $("#editEmployeeForm").serialize(),
+                            success: function (response) {
+                                if (response.success) {
+                                    Swal.fire("Thành công!", response.message, "success").then(() => {
+                                        location.reload(); // Tải lại trang sau khi cập nhật
+                                    });
+                                }
+                                else {
+                                    Swal.fire("Lỗi!", response.message, "error");
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        });
+</script>

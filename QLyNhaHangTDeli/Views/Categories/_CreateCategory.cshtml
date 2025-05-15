@@ -1,0 +1,62 @@
+﻿@using (Html.BeginForm("Create", "Categories", FormMethod.Post, new { id = "createCategoryForm" }))
+{
+    @Html.AntiForgeryToken()
+    <div class="mb-4">
+        <label class="block text-sm font-bold mb-2">Tên danh mục</label>
+        @Html.TextBox("CategoryName", null, new { @class = "w-full border rounded p-2", required = "required" })
+    </div>
+    <div class="text-center">
+        <button type="submit" class="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg">
+            Thêm
+        </button>
+    </div>
+}
+
+<script>
+    $(document).on("submit", "#createCategoryForm", function (e) {
+        e.preventDefault();
+
+        $.ajax({
+            url: '@Url.Action("Create", "Categories")',
+            method: "POST",
+            headers: {
+                "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+            },
+            data: $("#createCategoryForm").serialize(),
+
+            success: function (res) {
+                if (res.success) {
+                    // Hiển thị thông báo thành công với SweetAlert
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: 'Danh mục đã được thêm!',
+                        icon: 'success',
+                        confirmButtonText: 'Đóng'
+                    }).then(function () {
+                        $('#boxModal').addClass('hidden');
+                        location.reload();
+                    });
+                } else {
+                    // Hiển thị thông báo lỗi với SweetAlert
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: res.message || "Đã có lỗi xảy ra khi thêm danh mục.",
+                        icon: 'error',
+                        confirmButtonText: 'Đóng'
+                    });
+                }
+            },
+            error: function () {
+                // Thông báo lỗi khi không thể gửi request
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
+                    icon: 'error',
+                    confirmButtonText: 'Đóng'
+                });
+            }
+        });
+
+    });
+
+</script>

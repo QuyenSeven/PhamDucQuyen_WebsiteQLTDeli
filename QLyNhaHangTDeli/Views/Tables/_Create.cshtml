@@ -1,0 +1,55 @@
+﻿@model QLyNhaHangTDeli.Models.Table
+
+@using (Html.BeginForm("Create", "Tables", FormMethod.Post, new { id = "createTableForm" }))
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-group mb-4">
+        @Html.Label("Tên bàn", new { @class = "block mb-1 font-semibold" })
+        @Html.TextBoxFor(m => m.TableName, new { @class = "w-full border rounded px-3 py-2" })
+        @Html.ValidationMessageFor(m => m.TableName, "", new { @class = "text-red-500 text-sm" })
+    </div>
+
+    <div class="form-group mb-4">
+        @Html.Label("Trạng thái", new { @class = "block mb-1 font-semibold" })
+        @Html.TextBoxFor(m => m.Status, new { @class = "w-full border rounded px-3 py-2" })
+        @Html.ValidationMessageFor(m => m.Status, "", new { @class = "text-red-500 text-sm" })
+    </div>
+    <div class="form-group mb-4 text-center">
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Lưu
+        </button>
+    </div>
+}
+<script>
+    $(document).on('submit', '#createTableForm', function (e) {
+        e.preventDefault();
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thêm bàn thành công!',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        $('#boxModal').addClass('hidden'); // Ẩn modal
+
+                        location.reload();
+                    });
+
+
+                } else {
+                    $('#modalContent').html(res); // Nếu form có lỗi, reload lại form với lỗi
+                }
+            },
+            error: function () {
+                Swal.fire("Lỗi", "Không thể thêm bàn.", "error");
+            }
+        });
+    });
+</script>

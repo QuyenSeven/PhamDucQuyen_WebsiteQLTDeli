@@ -1,0 +1,88 @@
+﻿@model List<QLyNhaHangTDeli.Models.Complaint>
+@{
+    var pagination = (QLyNhaHangTDeli.Models.PaginationModel)ViewBag.Pagination;
+}
+<div class="h-[80vh] flex flex-col">
+    <div class="flex-1">
+        <table class="w-full table-auto border text-sm bg-white ">
+            <thead class="bg-white">
+                <tr>
+                    <th class="px-2 py-1 text-left">Họ tên</th>
+                    <th class="px-2 py-1 text-left">Tiêu đề</th>
+                    <th class="px-2 py-1 text-left">Ngày</th>
+                    <th class="px-2 py-1 text-left">Trạng thái</th>
+                    <th class="px-2 py-1 text-left"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var complaint in Model)
+                {
+                    <tr>
+                        <td class="px-2 py-1 text-blue-500">  @(complaint.CustomerID == "QUEST001" ? "Người ẩn danh" : complaint.Customer?.FullName)</td>
+                        <td class="px-2 py-1">@(complaint.Subject)</td>
+                        <td class="px-2 py-1">@(complaint.CreatedAt?.ToString("dd/MM/yyyy") ?? "")</td>
+                        <td class="px-2 py-1">@complaint.Status</td>
+                        <td class="px-2 py-1 flex gap-2 order-actions ">
+                            @if (complaint.Status == "Đã xử lý")
+                            {
+                                <div class="text-green-500 text-xl " title="Hoàn thành">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            }
+                            else if (complaint.Status == "Chưa xử lý")
+                            {
+                                <div class="text-yellow-500 text-xl " title="Chưa hoàn thành">
+                                    <i class="fas fa-clock"></i> <!-- Icon đồng hồ -->
+                                </div>
+                            }
+
+                            <a href="javascript:void(0);"
+                               onclick="loadDetailComplaint('@complaint.ComplaintID')"
+                               class="text-blue-500 bg-green-200 text-green-500 p-2 rounded-full text-sm" title="Chi tiết">
+                                chi tiết
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4 flex justify-center gap-2">
+        @if (pagination.CurrentPage > 1)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage - 1)">«</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">«</span>
+        }
+
+        <span class="px-2 py-1 text-sm">Trang @pagination.CurrentPage / @pagination.TotalPages</span>
+
+        @if (pagination.CurrentPage < pagination.TotalPages)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage + 1)">»</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">»</span>
+        }
+    </div>
+</div>
+<script>
+    function loadDetailComplaint(complaintId) {
+        $.ajax({
+            url: '/Complaints/ComplaintDetail',
+            type: 'GET',
+            data: { id: complaintId },
+            success: function (result) {
+                $('#modalContent').html(result); // đổ nội dung
+                $('#boxModal').removeClass('hidden'); // hiện modal
+            },
+            error: function () {
+                Swal.fire('Lỗi', 'Không thể tải nội dung phản hồi.', 'error');
+            }
+        });
+    }
+</script>

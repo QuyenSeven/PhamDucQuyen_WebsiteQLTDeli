@@ -1,0 +1,55 @@
+﻿@model IEnumerable<QLyNhaHangTDeli.Models.ModelView.CommentViewModel>
+
+<div class="h-[80vh] overflow-y-auto invisible-scrollbar">
+    @if (!Model.Any())
+    {
+        <p class="text-gray-500 italic">Chưa có bình luận nào.</p>
+    }
+    else
+    {
+        foreach (var c in Model)
+        {
+            <div class="flex space-x-4 bg-white p-4 rounded shadow border">
+                @if (string.IsNullOrEmpty(c.AvatarUrl))
+                {
+                    <i class="fas fa-user-circle w-10 h-10 text-gray-500 text-5xl"></i>
+                }
+                else
+                {
+
+                    {
+                        var ImgUrl = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(c.AvatarUrl, Url);
+                        <img src="@ImgUrl" class="w-10 h-10 rounded-full object-cover" alt="Avatar" />
+                    }
+                }
+
+                <div class="flex-1">
+                    <div class="flex justify-between items-center">
+                        <strong>@c.DisplayName</strong>
+                        <span class="text-sm text-gray-500">@c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+
+                    @if (c.Rating.HasValue)
+                    {
+                        <div class="flex items-center space-x-1 mb-1">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (i <= c.Rating.Value)
+                                {
+                                    <span class="text-yellow-500">&#9733;</span> <!-- filled star -->
+                                }
+                                else
+                                {
+                                    <span class="text-gray-300">&#9733;</span> <!-- empty star -->
+                                }
+                            }
+                        </div>
+                    }
+
+                    <p class="text-gray-800">@c.Content</p>
+                </div>
+            </div>
+        }
+
+    }
+</div>

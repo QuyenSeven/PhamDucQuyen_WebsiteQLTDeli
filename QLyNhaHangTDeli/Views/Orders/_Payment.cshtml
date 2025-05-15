@@ -1,0 +1,159 @@
+﻿@model QLyNhaHangTDeli.Models.Order
+
+
+
+@{
+    
+    var type = QLyNhaHangTDeli.Services.AuthHelper.GetUserType().ToString();
+    
+    bool hasCustomerId = (type == "Customer");
+}
+<div class="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
+    <h2 class="text-xl font-semibold text-center">Thanh toán đơn hàng</h2>
+    <input type="hidden" id="orderId" value="@Model.OrderID" />
+
+    <div class="mt-5 @(hasCustomerId ? "flex justify-center" : "grid grid-cols-1 md:grid-cols-2 gap-6")">
+        <!-- QR Code -->
+        <div class="flex flex-col items-center">
+            <img id="qrCodeImage" width="250" class="rounded m-2" />
+            <p>Quét mã QR để thanh toán </p>
+            <span id="amountDue">@String.Format("{0:N0}", Model.TotalAmount)</span>
+        </div>
+
+        @if (!hasCustomerId)
+        {
+            <!-- Thông tin thanh toán -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-medium mb-1">Số tiền phải trả:</label>
+                    <input type="text" value="@String.Format("{0:N0}", Model.TotalAmount)" readonly class="w-full px-3 py-2 border rounded bg-gray-100">
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1">Tiền khách đưa:</label>
+                    <input id="customerPay" type="text" placeholder="Nhập số tiền khách đưa"
+                           class="w-full px-3 py-2 border rounded focus:outline-none focus:ring focus:ring-blue-300">
+                </div>
+
+                <div>
+                    <label class="block font-medium mb-1">Tiền thừa:</label>
+                    <input id="changeAmount" type="text" readonly class="w-full px-3 py-2 border rounded bg-gray-100">
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Nút -->
+
+    <div class="mt-6 flex justify-center gap-3">
+        <button id="confirmPayment" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            Xác nhận
+        </button>
+        <button id="cancelPayment" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+            Huỷ
+        </button>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+        LoadQRcode();
+
+        function LoadQRcode() {
+            let bankCode = 'MB';       // mã ngân hàng
+            let accountNo = '0383468826';
+            let accountName = 'PHAM DUC QUYEN';
+            let amount = parseFloat($('#amountDue').text().replace(/,/g, '')) || 0;
+            let template = `https://img.vietqr.io/image/${bankCode}-${accountNo}-qr_only.png?amount=${amount}&addInfo=Thanh+toan+don+hang`;
+            console.log($('#amountDue').text());
+            console.log(amount);
+            $('#qrCodeImage').attr('src', template);
+        }
+
+        $('#customerPay').on('input', function () {
+
+            let input = $(this)[0]; // Lấy DOM element
+            let raw = input.value.replace(/,/g, '');
+
+            // Kiểm tra nếu không phải số thì bỏ qua
+            if (isNaN(raw)) return;
+
+            let caretPos = input.selectionStart;
+            let originalLength = input.value.length;
+
+
+            let amountDue = parseFloat($('#amountDue').text().replace(/,/g, '')) || 0;
+            let customerPay = parseFloat(raw) || 0;
+            let change = customerPay - amountDue;
+
+            let formatted = customerPay.toLocaleString('en-US');
+
+            // Gán lại giá trị đã format
+            input.value = formatted;
+
+            // Tính toán và gán lại vị trí con trỏ
+            let newLength = formatted.length;
+            let newCaretPos = caretPos + (newLength - originalLength);
+            input.setSelectionRange(newCaretPos, newCaretPos);
+
+            $('#changeAmount').val(change >= 0 ? change.toLocaleString() + ' VND' : 'Chưa đủ tiền');
+        });
+
+        // Xác nhận thanh toán
+        $('#confirmPayment').click(function () {
+            $.ajax({
+                url: '/Orders/MarkAsPaid',
+                type: 'POST',
+                data: {
+                    orderId: $('#orderId').val(), // hoặc truyền trực tiếp biến orderId nếu có
+                    isCOD: false
+                },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire('Thành công', 'Thanh toán thành công!', 'success').then(() => {
+                            $('#boxModal').addClass('hidden');
+                            if ($(window).width() > 1280) {
+                                // Thu hẹp mainContainer khi màn hình lớn
+
+
+                                $('#prdDetailModal').addClass('hidden');
+                                $('#mainContainer')
+                                    .addClass('w-full')
+                                    .removeClass('w-2/3');
+                                location.reload();
+                            }
+                            else {
+                                $('#boxModal').addClass('hidden');
+
+                                $('#mainContainer')
+                                    .addClass('w-full')
+                                    .removeClass('w-2/3');
+                                location.reload();
+
+                            }
+
+
+                        });
+
+
+                        // Có thể reload danh sách đơn hàng hoặc UI
+                        // location.reload();
+                    } else {
+                        Swal.fire('Lỗi', res.message || 'Không thể cập nhật đơn hàng.', 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Lỗi', 'Có lỗi khi cập nhật trạng thái đơn hàng.', 'error');
+                }
+            });
+
+        });
+
+
+
+        $('#cancelPayment').click(function () {
+            $('#boxModal').addClass('hidden');
+        })
+    });
+</script>

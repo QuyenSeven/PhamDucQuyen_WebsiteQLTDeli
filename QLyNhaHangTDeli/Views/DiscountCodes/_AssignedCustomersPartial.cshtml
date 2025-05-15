@@ -1,0 +1,64 @@
+﻿@model IEnumerable<QLyNhaHangTDeli.Models.CustomerDiscountCode>
+<div class="h-[60vh]">
+    <h3 class="text-xl font-semibold mb-2 text-center">Danh sách người dùng đã được gán mã</h3>
+    <table class="w-full table-auto overflow-y-auto invisible-scrollbar mt-5">
+        <thead>
+            <tr class="bg-white">
+                <th class="px-2 py-1 border">Mã KH</th>
+                <th class="px-2 py-1 border">Họ tên</th>
+                <th class="px-2 py-1 border">Ngày</th>
+                <th class="px-2 py-1 border"></th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model)
+            {
+                <tr class="text-center">
+                    <td class="px-2 py-1 ">@c.CustomerID</td>
+                    <td class="px-2 py-1 ">@c.Customer.FullName</td>
+                    <td class="px-2 py-1 ">@(c.AssignedAt?.ToString("dd/MM/yyyy"))</td>
+                    <td class="px-2 py-1 ">
+                        <a href="javascript:void(0)" class="text-red-600 btn-remove-assignment" title="Gỡ khỏi mã" data-id="@c.CustomerDiscountID">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).on('click', '.btn-remove-assignment', function () {
+        const id = $(this).data('id');
+
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc muốn gỡ khách hàng này khỏi mã giảm giá?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Gỡ',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/DiscountCodes/RemoveAssignment', { id }, function (res) {
+                    if (res.success) {
+                        $(`tr[data-id="${id}"]`).remove();
+                        Swal.fire({
+                            title: 'Đã gỡ',
+                            
+                            icon: 'success',
+                            timer: 2000, // Đặt thời gian tự động đóng sau 2 giây (2000ms)
+                            showConfirmButton: false, // Ẩn nút confirm
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Lỗi', res.message, 'error');
+                    }
+                });
+            }
+        });
+    });
+
+</script>

@@ -1,0 +1,198 @@
+﻿@model List<QLyNhaHangTDeli.Models.Table>
+@if (Model != null && Model.Any())
+{
+    <div id="tableList" class="overflow-y-auto invisible-scrollbar">
+        @foreach (var p in Model)
+        {
+            <div class="tableItem relative group border p-3 rounded shadow overflow-hidden flex items-center space-x-4 mb-2" data-id="@p.TableID">
+                <!-- Ảnh sản phẩm -->
+                <!-- Nội dung sản phẩm -->
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg">@p.TableName</h3>
+                    <p>Trạng thái: @p.Status</p>
+                    <p class="order-status text-sm text-green-600 font-medium"></p>
+                </div>
+                <div class="absolute bottom-2 right-2">
+                    <i class="fas fa-edit text-xl text-gray-700 cursor-pointer edit-table-btn" data-id="@p.TableID"></i>
+                </div>
+            </div>
+        }
+    </div>
+}
+else{
+<div class="text-center text-lg font-semibold text-gray-600 mt-8">
+    Không có bàn nào
+</div>
+}
+<div class="mt-4 flex justify-center items-center space-x-2">
+    <!-- Prev -->
+    <button class="px-3 py-2 border rounded bg-white hover:bg-gray-100 page-link"
+            data-page="@(ViewBag.CurrentPage - 1)"
+            @(ViewBag.CurrentPage == 1 ? "disabled" : "")>
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <!-- Input trang -->
+    <input id="pageTableInput" type="text" min="1" max="@ViewBag.TotalPages"
+           value="@ViewBag.CurrentPage"
+           class="w-8 px-2 py-1 border rounded text-center" />
+    <span>/ @ViewBag.TotalPages</span>
+
+    <!-- Next -->
+    <button class="px-3 py-2 border rounded bg-white hover:bg-gray-100 page-link"
+            data-page="@(ViewBag.CurrentPage + 1)"
+            @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")>
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+<script>
+    $(document).ready(function () {
+        // Khi click nút "Thêm bàn"
+        // Khi thay đổi trạng thái
+        $('#statusSelect').on('change', function () {
+            var status = $(this).val();
+            var page = 1; // Khi thay đổi bộ lọc, bắt đầu từ trang 1
+            loadTables(page);
+        });
+
+        // Khi thay đổi trang
+        $(document).on('click', '.page-link', function (e) {
+            e.preventDefault();
+            if ($(this).is('[disabled]')) return;
+
+            const page = parseInt($(this).data('page'));
+            if (!isNaN(page)) {
+                loadTables(page);
+            }
+        });
+
+        // Khi người dùng nhập số trang
+        $(document).on('keydown', '#pageTableInput', function (e) {
+            if (e.key === 'Enter') {
+                const page = parseInt($(this).val());
+                const min = parseInt($(this).attr('min'));
+                const max = parseInt($(this).attr('max'));
+
+                if (!isNaN(page) && page >= min && page <= max) {
+                    loadTables(page);
+                } else {
+                    alert("Số trang không hợp lệ.");
+                }
+            }
+        });
+
+      $('.tableItem').each(function () {
+            const $table = $(this);
+            const tableId = $table.data('id');
+
+            $.ajax({
+                url: '@Url.Action("CheckOrCreateOrder", "Orders")',
+                type: 'GET',
+                data: { tableId: tableId },
+                success: function (html) {
+                    const orderId = $(html).find('#orderIdHolder').data('order-id');
+                    $table.attr('data-order-id', orderId);
+                  
+                },
+                error: function () {
+                    $table.find('.order-status').text("Lỗi khi tải hóa đơn").addClass("text-red-500");
+                }
+            });
+      });
+
+       $('.tableItem').on('click', function () {
+            const tableId = $(this).data('id');
+
+            $.ajax({
+                url: '@Url.Action("CheckOrCreateOrder", "Orders")',
+                type: 'GET',
+                data: { tableId: tableId },
+                success: function (html) {
+                    $('#orderTableDetails')
+                        .html(html)
+                        .attr('data-order-id', $(html).find('#orderIdHolder').data('order-id'));
+                },
+                error: function () {
+                    Swal.fire("Lỗi", "Không thể tải thông tin bàn.", "error");
+                }
+            });
+        });
+    });
+
+    function loadTables(page) {
+        var status = $('#statusSelect').val(); // Lấy giá trị bộ lọc trạng thái
+        $.ajax({
+            url: '@Url.Action("Index", "Tables")',
+            type: 'GET',
+            data: { statusFilter: status, page: page },
+            success: function (result) {
+                $('#tableListContainer').html(result); // Cập nhật danh sách bàn
+            }
+        });
+    }
+
+    
+      let holdTimer;
+
+    $(document).on('mousedown', '.tableItem', function () {
+        const tableDiv = $(this);
+        const tableId = tableDiv.data('id');
+
+        holdTimer = setTimeout(function () {
+            Swal.fire({
+                title: 'Bạn có chắc chắn muốn xoá bàn này?',
+                text: 'Thao tác này không thể hoàn tác!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Xoá',
+                cancelButtonText: 'Huỷ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Tables/Delete', // chỉnh theo route controller của bạn
+                        type: 'POST',
+                        data: { id: tableId },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Đã xoá!', res.message, 'success');
+                                tableDiv.remove(); // hoặc location.reload() nếu cần
+                            } else {
+                                Swal.fire('Lỗi', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Lỗi', 'Không thể xoá bàn.', 'error');
+                        }
+                    });
+                }
+            });
+        }, 500); // 2 giây giữ chuột
+    });
+
+    $(document).on('mouseup mouseleave', '.tableItem', function () {
+        clearTimeout(holdTimer);
+    });
+
+    $(document).on('click', '.edit-table-btn', function (e) {
+        e.stopPropagation();
+        const tableId = $(this).data('id');
+
+        // Hiện modal
+        $('#boxModal').removeClass('hidden');
+
+        // Load nội dung form qua Ajax
+        $.ajax({
+            url: '/Tables/Edit', // hoặc route phù hợp của bạn
+            data: { id: tableId },
+            success: function (res) {
+                $('#modalContent').html(res);
+            },
+            error: function () {
+                $('#modalContent').html('<p class="text-red-500">Không thể tải nội dung. Vui lòng thử lại.</p>');
+            }
+        });
+    });
+
+</script>

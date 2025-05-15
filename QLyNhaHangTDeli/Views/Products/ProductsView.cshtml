@@ -1,0 +1,614 @@
+﻿@{
+    ViewBag.Title = "Sản phẩm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+<style>
+    .hidden-scrollbar {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* Internet Explorer 10+ */
+    }
+
+        .hidden-scrollbar::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+</style>
+<div>
+
+    <div class=" mx-auto flex justify-between space-x-2">
+        <!-- Main Content -->
+        <div class=" mx-auto p-4 w-full bg-white overflow-auto h-screen" id="mainContainer">
+            <style>
+                #mainContainer {
+                    scrollbar-width: none; /* Firefox */
+                    -ms-overflow-style: none; /* Internet Explorer 10+ */
+                }
+
+                    #mainContainer::-webkit-scrollbar {
+                        display: none; /* Safari and Chrome */
+                    }
+            </style>
+            <!-- Categories and Brands Buttons -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Danh mục sản phẩm</h2>
+                <div class="hidden lg:flex  space-x-2">
+                    <button id="prev" class="px-3 py-1 bg-white  rounded hover:bg-green-100 hover:text-green-400 transition">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="next" class="px-3 py-1 bg-white  rounded hover:bg-green-100 hover:text-green-400 transition">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Categories List -->
+            <div id="scroll-container" class="flex space-x-4 overflow-x-auto pb-4 hidden-scrollbar">
+
+            </div>
+
+            <!-- New Grocery Products Section -->
+            <div class="mt-3">
+                <div class="flex items-center justify-between">
+
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold mb-2">
+                            Sản phẩm
+                        </h2>
+                        <button id="openPrdModal" class="text-xl text-gray-500 mb-2 ml-2 hover:text-green-500 ">
+                            <i class="fas fa-plus"></i> <!-- Biểu tượng "plus" -->
+                        </button>
+
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button class="text-xl text-gray-700 p-2 mb-2 mr-2 hover:bg-green-200" id="list-view-btn">
+                            <i class="fas fa-th-list"></i> <!-- Biểu tượng danh sách -->
+                        </button>
+                        <button class="text-xl text-gray-700 p-2 mb-2 mr-2 hover:bg-green-200 bg-green-200" id="grid-view-btn">
+                            <i class="fas fa-th"></i> <!-- Biểu tượng lưới -->
+                        </button>
+                        <div class="mb-2">
+                            <select id="stock-filter" class="border border-gray-300 rounded px-3 py-2 text-gray-700 ">
+                                <option value="all">Tất cả</option>
+                                <option value="in-stock">Còn hàng</option>
+                                <option value="out-of-stock">Hết hàng</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+                <div id="searchContainer" class="flex items-center mb-4 z-10">
+                    <input id="searchInput" class="border border-gray-300 p-2 rounded w-full" placeholder="Search" type="text" />
+                </div>
+                <!-- Products list -->
+                <div id="productGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 h-full mb-[6.25rem]">
+                </div>
+            </div>
+        </div>
+        <!-- Billing Section -->
+        <div id="prdDetailModal" class="w-1/3 bg-white p-4 rounded shadow relative h-[90vh] hidden">
+            <button class="absolute top-2 right-2 text-gray-500 hover:text-red-500"><i class="fa fa-times"></i></button>
+            <div id="prdDetail">
+
+            </div>
+        </div>
+
+
+    </div>
+
+</div>
+
+<script>
+
+    $(document).ready(function () {
+        loadAllProducts();
+        loadCategories();
+
+        let scrollContainer = $("#scroll-container");
+        let scrollStep = 200; // Số pixel cuộn mỗi lần
+
+        $("#prev").click(function () {
+            scrollContainer.animate({ scrollLeft: "-=" + scrollStep }, 300, "swing");
+        });
+
+        $("#next").click(function () {
+            scrollContainer.animate({ scrollLeft: "+=" + scrollStep }, 300, "swing");
+        });
+
+        let mainContainer = $("#mainContainer");
+        let searchContainer = $("#searchContainer");
+
+        // Cuộn trang
+        $(mainContainer).scroll(function () {
+            let searchTop = searchContainer.offset().top; // Vị trí của ô tìm kiếm
+            let windowScroll = $(mainContainer).scrollTop(); // Vị trí scroll hiện tại
+
+            // Nếu cuộn xuống đến vị trí của ô tìm kiếm, gắn class fixed vào mainContainer
+            if (windowScroll >= searchTop) {
+                searchContainer.addClass("fixed  shadow-lg").css({ 'top': '110px', 'width': searchContainer.parent().width() });
+            } else {
+                searchContainer.removeClass("fixed top-110 shadow-lg");
+            }
+        });
+        function loadCategories() {
+           // console.log('đã load')
+            $.ajax({
+                url: '/Categories/GetCategories',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    let container = $('#scroll-container');
+                    container.empty();
+
+                    if (data && Array.isArray(data)) {
+                        let totalProductCount = 0;
+
+                        // Tính tổng số sản phẩm
+                        data.forEach(function (category) {
+                            totalProductCount += category.ProductCount;
+                        });
+
+                        // Thêm mục "All" vào đầu danh sách
+                        container.append(`
+                        <div class="category-item flex-none text-center p-4 rounded shadow text-green-500 bg-green-100" data-id="all">
+                            <div class="text-gray-700">All</div>
+                            <div class="text-gray-500 text-sm">${totalProductCount} Items</div>
+                        </div>
+                    `);
+
+                        data.forEach(function (category) {
+                            // Kiểm tra đối tượng category
+                            if (category && category.CategoryName) {
+                                container.append(`
+                            <div class="category-item flex-none bg-white text-center p-4 rounded shadow" data-id="${category.CategoryID}">
+                                <div  class="text-gray-700">${category.CategoryName}</div>
+                                <div class="text-gray-500 text-sm">${category.ProductCount} Items</div>
+                            </div>
+                        `);
+                            } else {
+                                console.error("Category hoặc CategoryName không tồn tại");
+                            }
+                        });
+
+                        container.append(`
+                        <div id="openCateModal" class=" flex-none bg-white text-center p-4 rounded shadow">
+                            <button  class="text-gray-500 text-2xl">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    `);
+                        $('.category-item').click(function () {
+                            $('.category-item').removeClass("text-green-500 bg-green-100").addClass("bg-white"); // Bỏ active cũ
+                            $(this).addClass("text-green-500 bg-green-100").removeClass("bg-white"); // Đặt active cho mục được chọn
+                        });
+                    } else {
+                        console.error("Dữ liệu không hợp lệ");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error loading categories:', error);
+                }
+            });
+        }
+
+        function loadAllProducts() {
+            $.ajax({
+                url: '/Products/GetAllProducts', // Your endpoint for all products
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var productHtml = '';
+                    data.forEach(function (product) {
+                        productHtml += `
+                        <div data-id="${product.ProductID}"  class=" openDetail relative group bg-white p-4 rounded shadow product-item">
+                            <img alt="${product.ProductName}" class="img-view w-full h-32 object-cover mb-2 ${product.Status === 'Hết hàng' ? 'grayscale' : ''}" src="${product.ImageUrl}" />
+                            <div class="txt text-gray-700">
+                                ${product.ProductName}
+                            </div>
+                            <div class=" txt ${product.Status === 'Hết hàng' ? 'text-gray-500' : 'text-orange-500'}">
+                                ${product.Price} vnđ
+                            </div>
+                            <span class=" txt status text-gray-500 ">
+                                ${product.Status}
+                            </span>
+                              <div
+                                class="absolute inset-0 rounded z-10 opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-auto"
+                                style="
+                                    background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.1) 100%);
+                                ">
+        
+                                <!-- Icon xoá hiện luôn khi hover vào lớp này -->
+                                <div class="w-full h-full relative delete-btn" data-id="${product.ProductID}">
+                                    <button class="absolute bottom-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-100 transition duration-300 delete-product-btn">
+                                      <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    });
+
+                    // Insert products into the #productGrid
+                    $('#productGrid').html(productHtml);
+                },
+                error: function () {
+                    alert('Error loading products');
+                }
+            });
+        }
+
+        // Load all products when the page loads
+
+        $('#scroll-container').on('click', '.category-item', function () {
+            var categoryId = $(this).data('id'); // Lấy categoryId từ data attribute
+
+            // Nếu là "All", gọi API lấy toàn bộ sản phẩm
+            var url = (categoryId === "all" || categoryId === undefined || categoryId === null)
+                ? '/Products/GetAllProducts'
+                : '/Products/GetProductsByCategory';
+
+            var data = (categoryId === "all" || categoryId === undefined || categoryId === null)
+                ? {} : { categoryId: categoryId };
+
+
+            // Gửi yêu cầu Ajax để lấy sản phẩm
+            $.ajax({
+                url: url, // Địa chỉ endpoint của API
+                method: 'GET',
+                data: data,
+                success: function (data) {
+                  
+                    // Render các sản phẩm vào trong #productGrid
+                    var productHtml = '';
+                    data.forEach(function (product) {
+                       
+                        productHtml += `
+                          <div data-id="${product.ProductID}" class=" openDetail relative group bg-white p-4 rounded shadow product-item">
+                            <img alt="${product.ProductName}" class=" img-view w-full h-32 object-cover mb-2 ${product.Status === 'Hết hàng' ? 'grayscale' : ''}" src="${product.ImageUrl}" />
+                            <div class=" txt text-gray-700">
+                                ${product.ProductName}
+                            </div>
+                            <div class="txt ${product.Status === 'Hết hàng' ? 'text-gray-500' : 'text-orange-500'}">
+                                ${product.Price} vnđ
+                            </div>
+                            <span class=" txt status text-gray-500 ">
+                                ${product.Status}
+                            </span>
+                              <div
+                                class="absolute inset-0 rounded z-10 opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-auto"
+                                style="
+                                    background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.1) 100%);
+                                ">
+        
+                                <!-- Icon xoá hiện luôn khi hover vào lớp này -->
+                                <div class="w-full h-full relative delete-btn" data-id="${product.ProductID}">
+                                    <button class="absolute bottom-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-100 transition duration-300 delete-product-btn">
+                                      <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    });
+
+                    // Hiển thị các sản phẩm
+                    $('#productGrid').html(productHtml);
+                },
+                error: function () {
+                    alert('Error loading products');
+                }
+            });
+        });
+
+        $(document).on('click', '#openCateModal', function () {
+            $('#boxModal').removeClass('hidden');
+
+            $.ajax({
+                url: '/Categories/Create',
+                type: 'GET',
+                success: function (data) {
+                    $('#modalContent').html(data);
+                },
+                error: function () {
+                    $('#modalContent').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                }
+            });
+        });
+
+
+
+        $(document).on('click', '#openPrdModal', function () {
+
+            // Mở prdDetail panel
+            
+
+            // Kiểm tra kích thước màn hình để chỉ thay đổi mainContainer nếu màn hình lớn
+            if ($(window).width() > 1024) {
+                // Thu hẹp mainContainer khi màn hình lớn
+
+                $('#prdDetailModal').removeClass('hidden');
+                $('#mainContainer')
+                    .removeClass('w-full')
+                    .addClass('w-2/3');
+                $.ajax({
+                    url: '/Products/Create',
+                    type: 'GET',
+                    success: function (data) {
+                        $('#prdDetail').html(data);
+                    },
+                    error: function () {
+                        $('#prdDetail').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                    }
+                });
+            }
+            else {
+                $('#boxModal').removeClass('hidden');
+                $('#prdDetailModal').addClass('hidden');
+                $('#mainContainer')
+                    .addClass('w-full')
+                    .removeClass('w-2/3');
+                // Gửi Ajax để lấy form từ /Categories/Create
+                $.ajax({
+                    url: '/Products/Create',
+                    type: 'GET',
+                    success: function (data) {
+                        $('#modalContent').html(data);
+                    },
+                    error: function () {
+                        $('#modalContent').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                    }
+                });
+            }
+
+        });
+
+        $(document).on('click', '.openDetail', function () {
+            var prdId = $(this).data("id");
+
+            if (prdId === undefined || prdId === null) {
+                console.error("ID sản phẩm không hợp lệ.");
+                return; // Ngừng thực hiện nếu id không hợp lệ
+            }
+
+            // Mở prdDetail panel
+            if ($(window).width() > 1024) {
+                // Thu hẹp mainContainer khi màn hình lớn
+                
+                $('#prdDetailModal').removeClass('hidden');
+                $('#mainContainer')
+                    .removeClass('w-full')
+                    .addClass('w-2/3');
+                $.ajax({
+                    url: '/Products/Edit',
+                    type: 'GET',
+                    data: { id: prdId },
+                    success: function (data) {
+                        $('#prdDetail').html(data);
+                    },
+                    error: function () {
+                        $('#prdDetail').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                    }
+                });
+            }
+            else {
+
+                $('#prdDetailModal').addClass('hidden');
+                $('#boxModal').removeClass('hidden');
+                $('#mainContainer')
+                    .addClass('w-full')
+                    .removeClass('w-2/3');
+            // Gửi Ajax để lấy form từ /Categories/Create
+                $.ajax({
+                    url: '/Products/Edit',
+                    type: 'GET',
+                    data: { id: prdId },
+                    success: function (data) {
+                        $('#modalContent').html(data);
+                    },
+                    error: function () {
+                        $('#modalContent').html('<p class="text-red-500 text-center">Lỗi tải form.</p>');
+                    }
+                });
+            }
+        });
+
+        $(document).on('click', '#prdDetailModal .fa-times', function () {
+            $('#prdDetailModal').addClass('hidden');
+            
+
+            // Trả lại kích thước ban đầu của mainContainer
+            $('#mainContainer')
+                .removeClass('w-2/3')
+                .addClass('w-full');
+        });
+
+
+        let pressTimer;
+        let progress = 0;
+
+        $('#scroll-container').on('mousedown touchstart', '.category-item', function (e) {
+            const $this = $(this);
+            $this.find('.progress-overlay').remove();
+
+            // Thêm overlay mới
+            const $overlay = $('<div></div>')
+                .addClass('progress-overlay')
+                .css({
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: '0%',
+                    backgroundColor: 'rgb(248,113,113)', // Tailwind bg-red-400
+                    opacity: 0.4,
+                    pointerEvents: 'none',
+                    zIndex: 10
+                });
+
+            // Đảm bảo .category-item có position: relative
+            $this.css('position', 'relative').append($overlay);
+
+            // Animate chiều rộng từ 0% → 100% trong 2s
+            $overlay.animate({ width: '100%' }, 1000);
+            pressTimer = setTimeout(function () {
+                const categoryId = $this.data('id');
+
+                Swal.fire({
+                    title: 'Xóa danh mục?',
+                    text: "Bạn có chắc muốn xóa danh mục này không?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Xóa',
+                    cancelButtonText: 'Hủy'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Gọi API để xóa
+                        $.ajax({
+                            url: '/Categories/DeleteCategory', // Tùy controller
+                            method: 'POST',
+                            data: { id: categoryId },
+                            success: function (response) {
+                                if (response.success) {
+                                    Swal.fire('Đã xóa!', response.message, 'success');
+                                    $this.remove(); // Xóa phần tử khỏi DOM
+                                } else {
+                                    Swal.fire('Lỗi!', response.message, 'error');
+                                }
+                            },
+                            error: function () {
+                                Swal.fire('Lỗi!', 'Không thể xóa danh mục.', 'error');
+                            }
+                        });
+                    }
+                });
+
+            }, 1000); // Giữ 2 giây
+
+        }).on('mouseup mouseleave touchend', '.category-item', function () {
+            clearTimeout(pressTimer);
+            $(this).find('.progress-overlay').stop().remove();
+        });
+
+        $(document).on('click', '.delete-product-btn', function () {
+            var productId = $(this).closest('.delete-btn').data('id'); // Lấy ProductID từ data-id của div cha
+
+            // Sử dụng SweetAlert2 để xác nhận xóa
+            Swal.fire({
+                title: 'Bạn có chắc chắn muốn xóa sản phẩm này?',
+                text: "Hành động này không thể hoàn tác!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Gửi yêu cầu Ajax đến backend để xóa sản phẩm
+                    $.ajax({
+                        url: '/Products/Delete', // Endpoint xóa sản phẩm
+                        method: 'POST',
+                        data: { id: productId }, // Gửi ProductID cần xóa
+                        success: function (response) {
+                            if (response.success) {
+                                // Nếu xóa thành công, xóa sản phẩm khỏi giao diện
+                                Swal.fire(
+                                    'Đã xóa!',
+                                    'Sản phẩm đã được xóa.',
+                                    'success'
+                                ).then(() => {
+                                    // Xóa phần tử khỏi DOM
+                                    $(`[data-id="${productId}"]`).closest('.product-item').remove();
+                                    // Reload trang sau khi thông báo xong
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire(
+                                    'Lỗi!',
+                                    'Xóa sản phẩm thất bại: ' + response.message,
+                                    'error'
+                                );
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            Swal.fire(
+                                'Lỗi!',
+                                'Đã xảy ra lỗi khi xóa sản phẩm!',
+                                'error'
+                            );
+                        }
+                    });
+                }
+            });
+        });
+
+
+      
+            // Lắng nghe sự kiện khi người dùng gõ vào ô tìm kiếm
+            $('#searchInput').on('input', function () {
+                var searchTerm = $(this).val().toLowerCase(); // Lấy giá trị tìm kiếm, chuyển thành chữ thường
+                //console.log("Tìm kiếm: " + searchTerm);
+                // Lặp qua tất cả các sản phẩm trong #productGrid
+                $('#productGrid .product-item').each(function () {
+                    var productName = $(this).find('.text-gray-700').text().toLowerCase(); // Lấy tên sản phẩm
+
+                    // Kiểm tra nếu tên sản phẩm chứa từ khóa tìm kiếm
+                    if (productName.indexOf(searchTerm) > -1) {
+                        $(this).show(); // Hiển thị sản phẩm nếu có kết quả khớp
+                    } else {
+                        $(this).hide(); // Ẩn sản phẩm nếu không khớp
+                    }
+                });
+            });
+            // Khi click vào dạng lưới
+        $('#grid-view-btn').on('click', function () {
+            $(this).addClass('bg-green-200')
+            $('#list-view-btn').removeClass('bg-green-200')
+
+                // Thêm lớp bg-green-200 vào productGrid và hiển thị dạng lưới
+                $('#productGrid').addClass(' grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4')
+                    .removeClass('table w-full text-left');
+
+            // Thêm các lớp cho sản phẩm nếu có
+            $('.product-item').addClass('p-4 rounded shadow').removeClass('flex justify-between  items-center my-auto px-4 ');
+            $('.product-item .txt').removeClass('w-1/4');
+            // Các lớp liên quan đến lưới
+
+            $('.product-item img').addClass('w-full h-32 object-cover').removeClass('w-32 h-16 object-contain')
+         });
+
+            // Khi click vào dạng danh sách
+        $('#list-view-btn').on('click', function () {
+            $(this).addClass('bg-green-200')
+            $('#grid-view-btn').removeClass('bg-green-200')
+                // Loại bỏ lớp bg-green-200 và chuyển sang dạng bảng
+                $('#productGrid').removeClass(' grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4')
+                    .addClass('table w-full text-left');
+
+                // Loại bỏ các lớp liên quan đến lưới
+            $('.product-item').removeClass('p-4 rounded shadow').addClass('flex justify-between  items-center my-auto px-4 ');
+            $('.product-item .txt').addClass('w-1/4');  // Các lớp liên quan đến lưới
+            $('.product-item img').addClass('w-32 h-16 object-contain').removeClass('w-full h-32 object-cover')
+        });
+
+        $('#stock-filter').on('change', function () {
+            const filter = $(this).val();
+
+            $('.product-item').each(function () {
+                const statusText = $(this).find('.status').text().trim(); // "Còn hàng" hoặc "Hết hàng"
+
+                if (filter === 'all') {
+                    $(this).show();
+                } else if (filter === 'in-stock' && statusText === 'Còn hàng') {
+                    $(this).show();
+                } else if (filter === 'out-of-stock' && statusText === 'Hết hàng') {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+    });
+</script>

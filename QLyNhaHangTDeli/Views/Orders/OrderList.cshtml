@@ -1,0 +1,72 @@
+﻿@model List<QLyNhaHangTDeli.Models.Order>
+
+@{
+    var pagination = (QLyNhaHangTDeli.Models.PaginationModel)ViewBag.Pagination;
+    ViewBag.Title = "Đơn hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="w-full flex flex-col h-full">
+    <div class="mb-4 flex gap-2">
+        <input type="text" id="search-orderid" class="border rounded text-sm px-2 py-1" placeholder="Mã đơn">
+        <input type="date" id="filter-date" class="border rounded text-sm px-2 py-1">
+        <select id="filter-status" class="border rounded text-sm px-2 py-1 bg-white">
+            <option value="">Tất cả</option>
+            <option value="Đã đặt đơn">Đã đặt đơn</option>
+            <option value="Đang vận chuyển">Đang vận chuyển</option>
+            <option value="Đã thanh toán">Hoàn thành</option>
+        </select>
+        <button id="sort-amount" data-sort="asc" class="border rounded text-sm px-2 py-1">
+            Sắp xếp tổng ↑↓
+        </button>
+    </div>
+
+    <div id="order-container">
+        @Html.Partial("_OrderListPartial", Model)
+    </div>
+</div>
+
+
+    <script>
+    function loadOrders(page = 1) {
+        var orderId = $('#search-orderid').val();
+        var date = $('#filter-date').val();
+        var status = $('#filter-status').val();
+        var sortOrder = $('#sort-amount').data('sort');
+
+        $.ajax({
+            url: '@Url.Action("OrderList", "Orders")',
+            type: 'GET',
+            data: {
+                orderId: orderId,
+                date: date,
+                status: status,
+                sortOrder: sortOrder,
+                page: page
+            },
+            success: function (response) {
+                $('#order-container').html(response);
+            }
+        });
+    }
+
+    // Trigger lọc
+    $('#search-orderid, #filter-date, #filter-status').on('change keyup', function () {
+        loadOrders(1);
+    });
+
+    // Sort
+    $('#sort-amount').click(function () {
+        var sort = $(this).data('sort') === 'asc' ? 'desc' : 'asc';
+        $(this).data('sort', sort);
+        loadOrders(1);
+    });
+
+    // Phân trang
+    $(document).on('click', '.pagination-link', function (e) {
+        e.preventDefault();
+        var page = $(this).data('page');
+        loadOrders(page);
+    });
+    </script>
+

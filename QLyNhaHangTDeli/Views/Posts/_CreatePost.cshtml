@@ -1,0 +1,130 @@
+﻿@model QLyNhaHangTDeli.Models.Post
+
+@using (Html.BeginForm("Create", "Posts", FormMethod.Post, new { id = "createPostForm" }))
+{
+    @Html.AntiForgeryToken()
+
+    <h2 class="text-lg font-bold mb-4">Thêm Sản Phẩm</h2>
+    <div class="mb-4 text-center">
+        <div id="imagePreview" class="w-[200px] h-[150px] bg-gray-200 rounded-lg flex items-center justify-center items-center cursor-pointer mx-auto">
+            <span class="text-gray-500">Click để chọn ảnh</span>
+        </div>
+        <label class="block text-gray-700 mt-2">Ảnh </label>
+
+        <!-- Form gửi ảnh -->
+
+        <input type="file" id="fileInput" name="imageFile" class="hidden" accept="image/*">
+
+    </div>
+    <div class="flex gap-4 mb-4">
+
+        <!-- Tiêu đề -->
+        <div class="flex-1">
+            <label class="block text-gray-700">Tiêu đề: </label>
+            <input type="text" name="Title" class="border border-gray-300 rounded-lg p-2 w-full">
+        </div>
+        <!-- Chủ đề -->
+        <div class="flex-1 overflow-y-auto hidden-scrollbar">
+            <label class="block text-gray-700">Chủ đề:</label>
+            <select name="PostType" class="border border-gray-300 rounded-lg p-2 w-full bg-white">
+                <option value="">-- Chọn chủ đề --</option>
+                <option value="Sự kiện">Sự kiện</option>
+                <option value="Sản phẩm">Sản phẩm</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-gray-700">Tóm tắt</label>
+        <input type="text" name="Summary" class="border border-gray-300 rounded-lg p-2 w-full">
+    </div>
+    <div class="mb-4">
+        <label class="block text-gray-700">Nội dung</label>
+        <textarea rows="5" name="Content" class="border border-gray-300 rounded-lg p-2 w-full bg-white"> </textarea>
+    </div>
+
+    <div class="text-center">
+        <button type="submit" class="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg">
+            Thêm
+        </button>
+    </div>
+}
+<script>
+    $(document).ready(function () {
+        // Khi click vào ô preview thì mở file picker
+
+        $('#imagePreview').on('click', function () {
+            $('#fileInput').click();
+        });
+
+        $('#fileInput').on('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+                    $('#imagePreview').html(`
+            <img src="${event.target.result}" class="w-full h-full object-cover rounded-lg" />
+        `);
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                // Nếu không chọn file, reset lại preview
+                $('#imagePreview').html('<span class="text-gray-500">Click để chọn ảnh</span>');
+            }
+        });
+
+        $('#createPostForm').on('submit', function (e) {
+            e.preventDefault();  // Ngừng hành động submit mặc định
+
+            var formData = new FormData(this);  // Thu thập dữ liệu form
+
+            $.ajax({
+                url: '/Posts/Create',  // URL action xử lý tạo sản phẩm
+                type: 'POST',
+                headers: {
+                    "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: formData, // ✅ sử dụng formData ở đây
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    if (response.success) {
+                        // Use Swal.fire for success
+                        Swal.fire({
+                            title: 'Thành công!',
+                            text: 'Sản phẩm đã được thêm!',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    }
+                    else {
+                        // Use Swal.fire for error
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: response.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function () {
+                    // Use Swal.fire for error in case of AJAX failure
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: 'Có lỗi xảy ra khi thêm sản phẩm!',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        });
+    });
+
+    // Khi người dùng chọn file
+
+
+</script>
