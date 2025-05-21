@@ -1,0 +1,613 @@
+﻿@model QLyNhaHangTDeli.Models.UserCustomerViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>
+        Tdeli
+    </title>
+    @{
+        string imageUrl1 = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl("logoIcon", Url);
+    }
+    <link rel="icon" href="@imageUrl1" type="image/png" />
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&amp;display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+
+    <style>
+        .subtab-link.active {
+            border-bottom: 2px solid #22c55e; /* green-500 = #22c55e */
+            color: #22c55e; /* text-green-500 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="boxModal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg
+        w-full h-full md:w-1/2 md:h-auto md:rounded-xl md:p-4 overflow-y-auto">
+            <div class="flex justify-end">
+
+                <div id="closeCreateModal" class="px-4 py-2  text-gray-500 rounded-lg">
+                    <i class="fas fa-times text-xl"></i>
+                </div>
+            </div>
+
+
+            <!-- Nội dung form sẽ được load bằng Ajax -->
+            <div id="modalContent">
+
+            </div>
+
+
+        </div>
+    </div>
+    @{
+        var isUser = Model.User != null;
+        var isCustomer = Model.Customer != null;
+        int colCount = isCustomer ? 3 : 2;
+    }
+
+    <div class="min-h-screen bg-gray-100 p-4 relative">
+        <!-- Nút Back -->
+        <button onclick="goBackAndReload()" class="absolute top-4 left-4 bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded-md shadow flex items-center gap-2">
+            <i class="fas fa-arrow-left text-gray-600"></i>
+            <span class="hidden sm:inline">Quay lại</span>
+        </button>
+
+        <a href="/Users/Logout" class="absolute top-4 right-4 bg-red-200 hover:bg-red-300 px-3 py-2 rounded-md shadow flex items-center gap-2">
+            <i class="fas fa-sign-out-alt text-red-600"></i>
+            <span class="hidden sm:inline">Đăng xuất</span>
+        </a>
+
+        <!-- Tabs -->
+        <div class="max-w-10xl mx-auto bg-white rounded-lg shadow-lg p-6 mt-12">
+            <div class="grid grid-cols-@colCount border-b mb-6 text-center">
+                <button class="tab-btn py-2 text-green-600 font-semibold border-b-2 border-green-500" data-tab="account">
+                    Thông tin tài khoản
+                </button>
+                <button class="tab-btn py-2 text-gray-600 hover:text-green-600" data-tab="password">
+                    Đổi mật khẩu
+                </button>
+                @if (isCustomer)
+                {
+                    <button class="tab-btn py-2 text-gray-600 hover:text-green-600" data-tab="orders">
+                        Hoá đơn và giảm giá
+                    </button>
+                }
+            </div>
+
+            <!-- Tab: Thông tin tài khoản -->
+            <div class="tab-content" id="account">
+                @if (isUser)
+                {
+                    <form id="accountForm">
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="text-sm">Tên đầy đủ</label>
+                                <input type="text" name="fullName" value="@Model.User.FullName" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-sm">Liên hệ</label>
+                                <input type="text" name="contactInfo" value="@Model.User.ContactInfo" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-sm">Chức vụ</label>
+                                <input type="text" readonly value="@Model.User.Role" class="w-full p-2 border rounded bg-gray-100">
+                            </div>
+                            <button type="submit" class="bg-green-500 text-white py-2 rounded">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                }
+                else if (isCustomer)
+                {
+                    <form id="accountForm">
+                        <div class="flex justify-center mb-6 relative">
+                            <input type="file" id="imageUpload" name="image" accept="image/*" class="hidden">
+
+                            @{
+                                var userImage = Model.Customer.ProfilePicture;
+                                bool hasValidImage = !string.IsNullOrEmpty(userImage) && !userImage.ToLower().Contains("no-image");
+                                var imgUser = QLyNhaHangTDeli.Services.ImageHelper.GetImageUrl(userImage, Url);
+
+                            }
+                            <label for="imageUpload" class="cursor-pointer flex justify-center">
+                                <img id="avatarPreview"
+                                     src="@((hasValidImage ? imgUser : "https://cdn-icons-png.flaticon.com/512/847/847969.png"))"
+                                     alt="Ảnh đại diện"
+                                     class="w-24 h-24 rounded-full object-cover border-2 border-gray-300 shadow-md hover:opacity-80 transition duration-200 bg-gray-100" />
+                            </label>
+
+                        </div>
+                        <div class="grid grid-cols-1 gap-4">
+
+                            <div>
+                                <label class="text-sm">Tên đầy đủ</label>
+                                <input type="text" name="fullName" value="@Model.Customer.FullName" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-sm">Email</label>
+                                <input type="email" name="email" value="@Model.Customer.Email" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-sm">Số điện thoại</label>
+                                <input type="text" name="phone" value="@Model.Customer.Phone" class="w-full p-2 border rounded">
+                            </div>
+                            <div>
+                                <label class="text-sm">Địa chỉ</label>
+                                <input type="text" name="address" value="@Model.Customer.Address" class="w-full p-2 border rounded">
+                            </div>
+
+                            <button type="submit" class="bg-green-500 text-white py-2 rounded">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <p>Không tìm thấy thông tin người dùng hoặc khách hàng.</p>
+                }
+            </div>
+
+            <!-- Tab: Đổi mật khẩu -->
+            <div class="tab-content hidden" id="password">
+                <form id="passwordForm" class="grid gap-4">
+                    <div>
+                        <label class="text-sm">Mật khẩu hiện tại</label>
+                        <input type="password" name="currentPassword" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="text-sm">Mật khẩu mới</label>
+                        <input type="password" name="newPassword" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="text-sm">Xác nhận mật khẩu mới</label>
+                        <input type="password" name="confirmPassword" class="w-full p-2 border rounded">
+                    </div>
+                    <button type="submit" class="bg-green-500 text-white py-2 rounded">Đổi mật khẩu</button>
+                </form>
+            </div>
+            @if (isCustomer)
+            {
+                <div class="tab-content hidden" id="orders">
+                    <div class="border-b">
+                        <ul class="flex text-sm font-medium text-center w-full " id="order-subtabs">
+                            <li class="flex-1">
+                                <button class="subtab-link w-full py-2 active text-gray-600 hover:text-green-600" data-target="subtab-ordered">Đơn hàng đã đặt</button>
+                            </li>
+                            <li class="flex-1">
+                                <button class="subtab-link w-full py-2 text-gray-600 hover:text-green-600" data-target="subtab-delivered">Đơn hàng đã giao</button>
+                            </li>
+                            <li class="flex-1">
+                                <button class="subtab-link w-full py-2 text-gray-600 hover:text-green-600" data-target="subtab-coupons">Mã giảm giá</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Subtab content -->
+                    <div id="subtab-ordered" class="subtab-content mt-5">
+                        @if (Model.Customer.Orders != null && Model.Customer.Orders.Any())
+                        {
+                            <table class="w-full table-auto border text-sm mt-2">
+                                <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="px-2 py-1 text-left">Mã đơn</th>
+                                        <th class="px-2 py-1 text-left">Ngày</th>
+                                        <th class="px-2 py-1 text-left">
+                                            Tổng
+                                            <button id="sort-amount" class="ml-1 text-xs text-gray-600 hover:text-black">&#x25B2;</button>
+                                        </th>
+                                        <th class="px-2 py-1 text-left">Trạng thái</th>
+                                        <th class="px-2 py-1 text-left"></th>
+                                    </tr>
+                                    <tr class="bg-gray-100">
+                                        <th class="px-2 py-1"><input type="text" id="search-orderid" class="border rounded w-full text-sm" placeholder="Mã đơn"></th>
+                                        <th class="px-2 py-1"><input type="date" id="filter-date" class="border rounded w-full text-sm"></th>
+                                        <th class="px-2 py-1"></th>
+                                        <th class="px-2 py-1">
+                                            <select id="filter-status" class="border rounded w-full text-sm">
+                                                <option value="">Tất cả</option>
+                                                <option value="Đã đặt đơn">Đã đặt đơn</option>
+                                                <option value="Đang vận chuyển">Đang vận chuyển</option>
+                                            </select>
+                                        </th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in Model.Customer.Orders.Where(o => o.OrderStatus == "Đã đặt đơn" || o.OrderStatus == "Đang vận chuyển"))
+                                    {
+                                        <tr>
+                                            <td class="px-2 py-1 text-blue-500">@order.OrderID</td>
+                                            <td class="px-2 py-1">@(order.CreatedAt?.ToString("dd/MM/yyyy") ?? "")</td>
+                                            <td class="px-2 py-1">@(order.TotalAmount?.ToString("N0") ?? "0") VNĐ</td>
+                                            <td class="px-2 py-1">
+                                                <select class="order-status-dropdown border px-1 py-0.5 rounded text-sm"
+                                                        data-order-id="@order.OrderID"
+                                                        @( order.OrderStatus == "Đã đặt đơn" ? "disabled" : "")>
+                                                    @if (order.OrderStatus == "Đã đặt đơn")
+                                                    {
+                                                        <option value="Đã đặt đơn" selected>Đã đặt đơn</option>
+
+                                                    }
+                                                    else if (order.OrderStatus == "Đang vận chuyển")
+                                                    {
+                                                        <option value="Đang vận chuyển" selected>Đang vận chuyển</option>
+                                                        <option value="Đã thanh toán">Đã thanh toán</option>
+                                                    }
+                                                   
+
+                                                </select>
+                                            </td>
+                                            <td class="px-2 py-1 flex items-center gap-2 text-left">
+                                                @if (order.OrderStatus == "Đang vận chuyển")
+                                                {
+                                                    <a href="#" class="text-green-500 text-xl update-status" data-id="@order.OrderID" title="Hoàn thành">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </a>
+                                                }
+                                                else if (order.OrderStatus == "Đã đặt đơn")
+                                                {
+                                                    <a href="javascript:void(0);" class="text-red-500 text-xl cancel-order" data-id="@order.OrderID" title="Huỷ đơn">
+                                                        <i class="fas fa-times-circle"></i>
+                                                    </a>
+                                                }
+                                                <a href="javascript:void(0);"
+                                                   onclick="loadOrderDetails('@order.OrderID')"
+                                                   class="text-green-500 rounded-full" title="Chi tiết">
+                                                    <i class="fas fa-search"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <p class="text-gray-500">Chưa có đơn hàng nào.</p>
+                        }
+                    </div>
+
+                    <div id="subtab-delivered" class="subtab-content hidden mt-5">
+                        @if (Model.Customer.Orders != null && Model.Customer.Orders.Any(o => o.OrderStatus == "Đã thanh toán"))
+                        {
+                            <table class="w-full table-auto border text-sm mt-2">
+                                <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="px-2 py-1 text-left">Mã đơn</th>
+                                        <th class="px-2 py-1 text-left">Ngày</th>
+                                        <th class="px-2 py-1 text-left">Tổng</th>
+                                        <th class="px-2 py-1 text-left"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in Model.Customer.Orders.Where(o => o.OrderStatus == "Đã thanh toán"))
+                                    {
+                                        <tr>
+                                            <td class="px-2 py-3">@order.OrderID</td>
+                                            <td class="px-2 py-3">@(order.CreatedAt?.ToString("dd/MM/yyyy")?? "")</td>
+                                            <td class="px-2 py-3">@(order.TotalAmount?.ToString("N0") ?? "0") VNĐ</td>
+                                            <td class="px-2  py-1">
+                                                <a href="javascript:void(0);"
+                                                   onclick="loadOrderDetails('@order.OrderID')"
+                                                   class="text-blue-500 bg-green-200 text-green-500 p-2 rounded-full" title="Chi tiết">
+                                                    chi tiết
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <p class="text-gray-500 text-center mt-5">Chưa có đơn hàng đã giao.</p>
+                        }
+                    </div>
+
+                    <div id="subtab-coupons" class="subtab-content hidden mt-5">
+                        @Html.Action("ListCouponsPartial", "DiscountCodes")
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <script>
+        function goBackAndReload() {
+            window.history.back();  // Quay lại trang trước
+            setTimeout(function () {
+                window.location.reload();  // Reload trang sau một khoảng thời gian (để đảm bảo quay lại trước khi reload)
+            }, 100);
+        }
+
+        $(document).ready(function () {
+
+            $('.subtab-link').click(function () {
+                var target = $(this).data('target');
+
+                $('.subtab-content').addClass('hidden'); // Ẩn tất cả
+                $('#' + target).removeClass('hidden');   // Hiện cái được chọn
+
+                $('.subtab-link').removeClass('active'); // Bỏ active ở tất cả nút
+                $(this).addClass('active');              // Thêm active cho nút đang bấm
+            });
+
+            $('#imageUpload').on('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#avatarPreview').attr('src', e.target.result);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            $('.tab-btn').on('click', function () {
+                // Xóa active ở tất cả tab
+                $('.tab-btn').removeClass('text-green-600 font-semibold border-b-2 border-green-500');
+                $('.tab-content').addClass('hidden');
+
+                // Thêm class active cho tab đang chọn
+                $(this).addClass('text-green-600 font-semibold border-b-2 border-green-500');
+
+                // Hiển thị nội dung tương ứng
+                const target = $(this).data('tab');
+                $('#' + target).removeClass('hidden');
+            });
+
+              $('#accountForm').submit(function (e) {
+            e.preventDefault(); // Ngăn reload trang
+
+            var formData = new FormData(this); // Lấy data từ form, kể cả file ảnh
+
+            $.ajax({
+                url: '@Url.Action("UpdateAccount", "Users")', // Cập nhật action thực tế
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: res.message || 'Thông tin đã được cập nhật!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Có lỗi xảy ra. Vui lòng thử lại.'
+                    });
+                }
+            });
+              });
+
+            $('#passwordForm').on('submit', function (e) {
+                e.preventDefault();
+
+                const currentPassword = $('[name="currentPassword"]').val().trim();
+                const newPassword = $('[name="newPassword"]').val().trim();
+                const confirmPassword = $('[name="confirmPassword"]').val().trim();
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    Swal.fire({ icon: 'warning', title: 'Vui lòng nhập đầy đủ thông tin' });
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    Swal.fire({ icon: 'error', title: 'Mật khẩu xác nhận không khớp' });
+                    return;
+                }
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/Users/ChangePassword', // hoặc route tùy bạn
+                    data: {
+                        currentPassword,
+                        newPassword
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: 'Đổi mật khẩu thành công' });
+                            $('#passwordForm')[0].reset();
+                        } else {
+                            Swal.fire({ icon: 'error', title: res.message });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Có lỗi xảy ra' });
+                    }
+                });
+            });
+
+            function filterTable() {
+                var selectedDate = $('#filter-date').val();
+                var selectedStatus = $('#filter-status').val().toLowerCase();
+                var searchOrderID = $('#search-orderid').val().toLowerCase();
+
+                $('tbody tr').each(function () {
+                    var row = $(this);
+                    var orderID = row.find('td:eq(0)').text().toLowerCase();
+                    var date = row.find('td:eq(1)').text();
+                    var status = row.find('td:eq(3)').text().toLowerCase();
+
+                    var show = true;
+
+                    if (selectedDate && !date.includes(selectedDate.split("-").reverse().join("/"))) {
+                        show = false;
+                    }
+                    if (selectedStatus && status !== selectedStatus) {
+                        show = false;
+                    }
+                    if (searchOrderID && !orderID.includes(searchOrderID)) {
+                        show = false;
+                    }
+
+                    if (show) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            }
+
+            $('#filter-date, #filter-status, #search-orderid').on('input change', function () {
+                filterTable();
+            });
+
+            var sortAsc = true;
+            $('#sort-amount').click(function () {
+                var rows = $('tbody tr').get();
+                rows.sort(function (a, b) {
+                    var A = parseInt($(a).find('td:eq(2)').text().replace(/[^\d]/g, '')) || 0;
+                    var B = parseInt($(b).find('td:eq(2)').text().replace(/[^\d]/g, '')) || 0;
+                    return sortAsc ? A - B : B - A;
+                });
+                sortAsc = !sortAsc;
+                $('#sort-amount').html(sortAsc ? '&#x25B2;' : '&#x25BC;');
+                $.each(rows, function (index, row) {
+                    $('tbody').append(row);
+                });
+            });
+
+
+        });
+        function loadOrderDetails(orderId) {
+            $.ajax({
+                url: '/Orders/OrderDetails',
+                type: 'GET',
+                data: { id: orderId },
+                success: function (html) {
+                    $('#modalContent').html(html);
+                    $('#boxModal').removeClass('hidden');
+                },
+                error: function () {
+                    alert('Không thể tải chi tiết đơn hàng!');
+                }
+            });
+        }
+        $(document).on('click', '.cancel-order', function (e) {
+            e.preventDefault();
+            var orderId = $(this).data('id');
+            var row = $(this).closest('tr');
+
+            Swal.fire({
+                title: 'Xác nhận huỷ đơn?',
+                text: "Bạn sẽ không thể hoàn tác thao tác này!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Huỷ đơn',
+                cancelButtonText: 'Không'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Orders/DeleteOrder',
+                        type: 'POST',
+                        data: { id: orderId },
+                        success: function (res) {
+                            if (res.success) {
+                                row.remove();
+                                Swal.fire('Đã huỷ!', 'Đơn hàng đã được huỷ.', 'success');
+                            } else {
+                                Swal.fire('Thất bại!', 'Không thể huỷ đơn.', 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Lỗi!', 'Có lỗi xảy ra khi xử lý.', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+          $('.order-status-dropdown').change(function() {
+                const orderId = $(this).data('order-id');
+                const newStatus = $(this).val();
+
+                updateOrderStatus(orderId, newStatus, function() {
+                    sendOrderStatusEmail(orderId, newStatus);
+                    // Reload hoặc cập nhật UI nếu cần
+                    location.reload(); // hoặc bạn có thể cập nhật từng phần
+                });
+            });
+
+            // Khi click nút Hoàn thành (chuyển trạng thái "Đang vận chuyển" -> "Đã thanh toán")
+            $('.update-status').click(function(e) {
+                e.preventDefault();
+                const orderId = $(this).data('id');
+                const newStatus = "Đã thanh toán";
+
+                updateOrderStatus(orderId, newStatus, function() {
+                    sendOrderStatusEmail(orderId, newStatus);
+                    location.reload();
+                });
+            });
+
+
+        // Hàm cập nhật trạng thái đơn hàng
+        function updateOrderStatus(orderId, newStatus, callback) {
+            $.ajax({
+                url: '@Url.Action("UpdateOrderStatus", "Orders")',
+                type: 'POST',
+                data: { id: orderId, newStatus: newStatus },
+                success: function(res) {
+                    if (res.success) {
+                         $.ajax({
+                             url: '@Url.Action("SendOrderStatusEmail", "Orders")',
+                             type: 'POST',
+                             data: { orderId: orderId },
+                             success: function (emailRes) {
+                                 if (!emailRes.success) {
+                                     Swal.fire({ icon: 'warning', title: 'Cập nhật xong nhưng lỗi khi gửi email!' });
+                                 }
+                             },
+                             error: function () {
+                                 Swal.fire({ icon: 'warning', title: 'Không gửi được email xác nhận!' });
+                             }
+                         });
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Trạng thái đã được cập nhật!',
+                            timer: 1200,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload(); // Reload sau khi Swal hiển thị xong
+                        });
+
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Lỗi cập nhật trạng thái' });
+                    }
+                },
+                error: function() {
+                    Swal.fire({ icon: 'error', title: 'Lỗi máy chủ!' });
+                }
+            });
+        }
+
+
+    </script>
+
+</body>
+</html>

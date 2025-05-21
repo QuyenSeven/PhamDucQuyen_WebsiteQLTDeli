@@ -1,0 +1,90 @@
+﻿@model QLyNhaHangTDeli.Models.Order
+
+
+
+@if (Model.CustomerID == "QUEST001")
+{
+
+    string fullName = "";
+    string email = "";
+    string phone = "";
+    string address = "";
+
+    string description = Model.ODDescription ?? "";
+    int indexHoTen = description.IndexOf("ho ten");
+    int indexEmail = description.IndexOf("email");
+    int indexSdt = description.IndexOf("sdt");
+    int indexDiaChi = description.IndexOf("dia chi");
+
+    if (indexHoTen >= 0 && indexEmail > indexHoTen)
+    {
+        fullName = description.Substring(indexHoTen + "ho ten".Length, indexEmail - (indexHoTen + "ho ten".Length)).Trim();
+    }
+    if (indexEmail >= 0 && indexSdt > indexEmail)
+    {
+        email = description.Substring(indexEmail + "email".Length, indexSdt - (indexEmail + "email".Length)).Trim();
+    }
+
+    if (indexSdt >= 0 && indexDiaChi > indexSdt)
+    {
+        phone = description.Substring(indexSdt + "sdt".Length, indexDiaChi - (indexSdt + "sdt".Length)).Trim();
+    }
+
+    if (indexDiaChi >= 0)
+    {
+        address = description.Substring(indexDiaChi + "dia chi".Length).Trim();
+
+    }
+
+
+
+    <h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng của @fullName</h2>
+    <p>Email: @email</p>
+    <p>Số điện thoại: @phone</p>
+    <p>Địa chỉ: @address</p>
+
+
+}
+else if (Model.CustomerID == null)
+{
+    <h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng của @Model.OrderID</h2>
+}
+else
+{
+    <h2 class="text-lg font-bold mb-2">Chi tiết đơn hàng của @Model.Customer.FullName</h2>
+    <p>Email: @Model.Customer.Email</p>
+    <p>Số điện thoại: @Model.Customer.Phone</p>
+    <p>Địa chỉ: @Model.Customer.Address</p>
+
+}
+
+
+<div class="h-[500px] overflow-y-auto mt-3">
+    <table class="w-full text-sm border mb-4">
+        <thead class="bg-white">
+            <tr>
+                <th class="px-2 py-1 text-left">Sản phẩm</th>
+                <th class="px-2 py-1 text-left">Số lượng</th>
+                <th class="px-2 py-1 text-left">Đơn giá</th>
+                <th class="px-2 py-1 text-left">Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderDetails)
+            {
+                <tr>
+                    <td class="px-2 py-1">@item.Product.ProductName</td>
+                    <td class="px-2 py-1">@item.Quantity</td>
+                    <td class="px-2 py-1">@item.Product.Price.ToString("N0") VNĐ</td>
+                    <td class="px-2 py-1">@((item.Quantity * item.Product.Price).ToString("N0") ?? "0") VNĐ</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="text-right">
+    <p>Tổng tiền: <strong>@(Model.TotalAmount?.ToString("N0")) VNĐ</strong></p>
+    <p>Giảm giá: <strong>@(Model.Discount?.ToString("N0") ?? "0") VNĐ</strong></p>
+</div>
+

@@ -1,0 +1,235 @@
+﻿@model List<QLyNhaHangTDeli.Models.Order>
+@{
+    var pagination = (QLyNhaHangTDeli.Models.PaginationModel)ViewBag.Pagination;
+}
+<div class="h-[80vh] flex flex-col">
+    <div class="flex-1">
+    <table class="w-full table-auto border text-sm bg-white ">
+        <thead class="bg-white">
+            <tr>
+                <th class="px-2 py-1 text-left"></th>
+                <th class="px-2 py-1 text-left">Mã đơn</th>
+                <th class="px-2 py-1 text-left">Ngày</th>
+                <th class="px-2 py-1 text-left">Tổng</th>
+                <th class="px-2 py-1 text-left">Trạng thái</th>
+                <th class="px-2 py-1 text-left">Thao tác</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model)
+            {
+                <tr>
+                    <td class="px-2 py-1 text-green-500">
+                        <input type="checkbox" class="select-order accent-green-500" data-id="@order.OrderID" />
+                    </td>
+                    <td class="px-2 py-1 text-blue-500">@order.OrderID</td>
+                    <td class="px-2 py-1">@(order.CreatedAt?.ToString("dd/MM/yyyy") ?? "")</td>
+                    <td class="px-2 py-1">@(order.TotalAmount?.ToString("N0") ?? "0") VNĐ</td>
+                    <td class="px-2 py-1">
+                        <select class="order-status-dropdown border px-1 py-0.5 rounded text-sm"
+                                data-order-id="@order.OrderID"
+                                @(order.OrderStatus == "Đã thanh toán" ? "disabled" : "")>
+                            @if (order.OrderStatus == "Đã đặt đơn")
+                            {
+                                <option value="Đã đặt đơn" selected>Đã đặt đơn</option>
+                                <option value="Đang vận chuyển">Đang vận chuyển</option>
+                            }
+                            else if (order.OrderStatus == "Đang vận chuyển")
+                            {
+                                <option value="Đang vận chuyển" selected>Đang vận chuyển</option>
+                                <option value="Đã thanh toán">Đã thanh toán</option>
+                            }
+                            else if (order.OrderStatus == "Đã thanh toán")
+                            {
+                                <option value="Đã thanh toán" selected>Đã thanh toán</option>
+                            }
+                        </select>
+                    </td>
+
+
+                    <td class="px-2 py-1 flex gap-2 order-actions" data-order-id="@order.OrderID">
+                        @if (order.OrderStatus == "Đã đặt đơn")
+                        {
+                            <a href="#" class="text-green-500 text-xl update-status-icon"
+                               data-id="@order.OrderID" data-next-status="Đang vận chuyển" title="Hoàn thành">
+                                <i class="fas fa-check-circle"></i>
+                            </a>
+                        }
+                        else if (order.OrderStatus == "Đang vận chuyển")
+                        {
+                            <a href="#" class="text-yellow-500 text-xl update-status-icon"
+                               data-id="@order.OrderID" data-next-status="Đã thanh toán" title="Đang vận chuyển">
+                                <i class="fas fa-clock"></i>
+                            </a>
+                        }
+                        else if (order.OrderStatus == "Đã thanh toán")
+                        {
+                            <a href="#" class="text-blue-500 text-xl" title="Đã thanh toán">
+                                <i class="fas fa-file-invoice"></i>
+                            </a>
+                        }
+
+                        <a href="javascript:void(0);" onclick="loadOrderDetails('@order.OrderID')"
+                           class="text-green-500 text-xl" title="Chi tiết">
+                            <i class="fas fa-search"></i>
+                        </a>
+
+                    </td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+    </div>
+
+    <div class="mt-4 flex justify-center gap-2">
+        @if (pagination.CurrentPage > 1)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage - 1)">«</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">«</span>
+        }
+
+        <span class="px-2 py-1 text-sm">Trang @pagination.CurrentPage / @pagination.TotalPages</span>
+
+        @if (pagination.CurrentPage < pagination.TotalPages)
+        {
+            <a href="#" class="pagination-link px-3 py-1 bg-gray-200 rounded" data-page="@(pagination.CurrentPage + 1)">»</a>
+        }
+        else
+        {
+            <span class="px-3 py-1 bg-gray-100 text-gray-400 rounded">»</span>
+        }
+    </div>
+    </div>
+<script>
+      const statusIconTemplates = {
+        "Đã đặt đơn": `<a href="#" class="text-green-500 text-xl update-status-icon"
+                           data-id="{id}" data-next-status="Đang vận chuyển" title="Hoàn thành">
+                           <i class="fas fa-check-circle"></i></a>`,
+        "Đang vận chuyển": `<a href="#" class="text-yellow-500 text-xl update-status-icon"
+                               data-id="{id}" data-next-status="Đã thanh toán" title="Đang vận chuyển">
+                               <i class="fas fa-clock"></i></a>`,
+        "Đã thanh toán": `<a href="#" class="text-blue-500 text-xl" title="Đã thanh toán">
+                           <i class="fas fa-file-invoice"></i></a>`
+    };
+
+    // Khi chọn từ dropdown
+    $(document).on("change", ".order-status-dropdown", function () {
+        var select = $(this);
+        var orderId = select.data("order-id");
+        var newStatus = select.val();
+
+        // Nếu là đã thanh toán thì không làm gì
+        if (newStatus === "Đã thanh toán" && select.is(':disabled')) return;
+
+        updateOrderStatus(orderId, newStatus, function () {
+            updateIcon(orderId, newStatus);
+        });
+    });
+
+
+    // Khi click icon
+    $(document).on("click", ".update-status-icon", function (e) {
+        e.preventDefault();
+
+        var icon = $(this);
+        var orderId = icon.data("id");
+        var newStatus = icon.data("next-status");
+
+        updateOrderStatus(orderId, newStatus, function () {
+            // Cập nhật cả icon và dropdown
+            updateIcon(orderId, newStatus);
+            updateDropdown(orderId, newStatus);
+        });
+    });
+
+    // Gọi Ajax cập nhật trạng thái
+  function updateOrderStatus(orderId, newStatus, callback) {
+    $.ajax({
+        url: '@Url.Action("UpdateOrderStatus", "Orders")',
+        type: 'POST',
+        data: { id: orderId, newStatus: newStatus },
+        success: function (res) {
+            if (res.success) {
+                // Gửi email sau khi cập nhật thành công
+                $.ajax({
+                    url: '@Url.Action("SendOrderStatusEmail", "Orders")',
+                    type: 'POST',
+                    data: { orderId: orderId },
+                    success: function (emailRes) {
+                        if (!emailRes.success) {
+                            Swal.fire({ icon: 'warning', title: 'Cập nhật xong nhưng lỗi khi gửi email!' });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'warning', title: 'Không gửi được email xác nhận!' });
+                    }
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Trạng thái đã được cập nhật!',
+                    timer: 1200,
+                    showConfirmButton: false
+                });
+
+                if (callback) callback();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Lỗi cập nhật trạng thái' });
+            }
+        },
+        error: function () {
+            Swal.fire({ icon: 'error', title: 'Lỗi máy chủ!' });
+        }
+    });
+}
+
+
+    // Cập nhật icon trong cùng dòng
+    function updateIcon(orderId, newStatus) {
+        const row = $(`.order-actions[data-order-id='${orderId}']`);
+        const detailBtn = row.find("a[onclick]"); // Nút "chi tiết"
+        row.find("a.update-status-icon").remove(); // Xóa icon cũ
+
+        const iconHtml = statusIconTemplates[newStatus]?.replace("{id}", orderId) || "";
+        if (iconHtml) {
+            detailBtn.before(iconHtml); // Chèn icon mới trước nút chi tiết
+        }
+    }
+
+    // Cập nhật dropdown tương ứng
+    function updateDropdown(orderId, newStatus) {
+        const dropdown = $(`.order-status-dropdown[data-order-id='${orderId}']`);
+        dropdown.val(newStatus);
+    }
+
+    setInterval(function () {
+        $.get("@Url.Action("CheckAutoUpdateOrders", "Orders")", function (res) {
+            if (res.success && res.updatedOrders.length > 0) {
+                res.updatedOrders.forEach(order => {
+                    updateOrderRow(order.OrderID, order.OrderStatus);
+                });
+            }
+        });
+    }, 60000);
+
+    function loadOrderDetails(orderId) {
+        $.ajax({
+            url: '/Orders/OrderDetails',
+            type: 'GET',
+            data: { id: orderId },
+            success: function (html) {
+                $('#modalContent').html(html);
+                $('#boxModal').removeClass('hidden');
+            },
+            error: function () {
+                alert('Không thể tải chi tiết đơn hàng!');
+            }
+        });
+    }
+
+</script>

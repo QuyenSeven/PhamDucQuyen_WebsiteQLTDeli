@@ -1,0 +1,377 @@
+﻿@model QLyNhaHangTDeli.Models.Customer
+
+<div class="space-y-2">
+    <div class="mb-3">
+        <label for="FullName" class="block font-semibold mb-1">Họ tên:</label>
+        <input type="text"
+               id="FullName"
+               name="FullName"
+               value="@(Model.CustomerID == "QUEST001" ? "" : Model.FullName)"
+               data-original="@Html.Raw(Model.CustomerID == "QUEST001" ? "" : Model.FullName)"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+    </div>
+
+    @if (Model.CustomerID == "QUEST001")
+    {
+        <div class="mb-3">
+            <label for="Email" class="block font-semibold mb-1">Email:</label>
+            <input type="text"
+                   id="Email"
+                   name="Email"
+                   value=""
+                   data-original="@Model.Email"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+        </div>
+    }
+
+    <div class="mb-3">
+        <label for="Phone" class="block font-semibold mb-1">Số điện thoại:</label>
+        <input type="text"
+               id="Phone"
+               name="Phone"
+               value="@Model.Phone"
+               data-original="@Model.Phone"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+    </div>
+
+    <div class="mb-3">
+        <input type="hidden" id="Latitude" name="Latitude" />
+        <input type="hidden" id="Longitude" name="Longitude" />
+        <input type="hidden" id="ORSApiKey" value="@ViewBag.ORSApiKey" />
+        <label for="Address" class="block font-semibold mb-1">Địa chỉ:</label>
+        <input type="text"
+               id="Address"
+               name="Address"
+               value="@Model.Address"
+               data-original="@Model.Address"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md" />
+        <ul id="suggestions" class="border bg-white absolute z-10 hidden"></ul>
+    </div>
+</div>
+
+<div class="mt-4 flex gap-3 text-center justify-center">
+    <button type="button"
+            id="btnConfirm"
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">
+        Xác nhận
+    </button>
+
+
+
+    @if (Model.CustomerID == "QUEST001")
+    {
+        <button type="button"
+                id="btnCreateAccount"
+                class="bg-red-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md">
+            Tạo tài khoản
+        </button>
+    }
+    else
+    {
+        <button type="button"
+                id="btnUpdateInfo"
+                class="text-white px-4 py-2 rounded-md hidden bg-blue-600 hover:bg-blue-700 cursor-pointer">
+            Thay đổi thông tin
+        </button>
+    }
+</div>
+<script>
+
+    $(document).ready(function () {
+
+
+        checkChanges();
+        getCoordinatesByAddress(); // Gọi lấy tọa độ mới
+
+
+        $("#btnConfirm").on("click", function (e) {
+            e.preventDefault();
+
+            const fullName = $("#FullName").val().trim();
+            const email = ($("#Email").val() || "").trim();
+            const phone = $("#Phone").val().trim();
+            const address = $("#Address").val().trim();
+
+            if (!fullName || !phone) {
+                Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng nhập đầy đủ họ tên và số điện thoại.' });
+                return;
+            }
+
+            setTimeout(() => {
+                const lat = parseFloat($("#Latitude").val());
+                const lon = parseFloat($("#Longitude").val());
+                const orderId = $('#prdDetail').data("order-id");
+
+                if (isNaN(lat) || isNaN(lon)) {
+                    Swal.fire({ icon: 'warning', title: 'Thiếu tọa độ', text: 'Vui lòng chọn địa chỉ chính xác.' });
+                    return;
+                }
+
+                // ✅ Lưu thông tin vào localStorage
+                localStorage.setItem("savedCustomerInfo", JSON.stringify({
+                    fullName, phone, address, email
+                }));
+
+                $('#boxModal').addClass('hidden');
+
+                $.ajax({
+                    url: '/Orders/CalculateDistance',
+                    type: 'POST',
+                    data: { latitude: lat, longitude: lon, orderId: orderId },
+                    success: function (res) {
+                        if (res.success) {
+                            $("#shipPrice").text(res.fee.toLocaleString("vi-VN") + " ₫").data("price", res.shipPrice);
+                            $("#finalPrice").text(Number(res.finalPrice).toLocaleString("vi-VN") + " ₫");
+                            console.log("Khoảng cách: " + res.distance + res.finalPrice);
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Thất bại', text: res.message });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể kết nối đến server.' });
+                    }
+                });
+            }, 600);
+        });
+
+
+
+
+
+        let timer;
+        $("#Address").on("input", function () {
+
+            clearTimeout(timer);
+            const query = $(this).val();
+            if (query.length < 3) return;
+
+            timer = setTimeout(() => {
+                $.ajax({
+                    url: `https://api.openrouteservice.org/geocode/autocomplete`,
+                    method: "GET",
+                    data: {
+                        api_key: $("#ORSApiKey").val(),
+                        text: query,
+                        // Giới hạn trong khu vực Hà Nội
+                        "boundary.rect.min_lon": 105.7,  // Tây
+                        "boundary.rect.min_lat": 20.8,  // Nam
+                        "boundary.rect.max_lon": 106.1, // Đông
+                        "boundary.rect.max_lat": 21.3   // Bắc
+                    },
+                    success: function (data) {
+                        let suggestions = data.features.map(f => ({
+                            label: f.properties.label,
+                            coords: f.geometry.coordinates // [lon, lat]
+                        }));
+                        showSuggestions(suggestions); // Bạn sẽ cần sửa hàm showSuggestions để chứa cả tọa độ
+                    }
+                });
+            }, 300);
+        });
+
+        function showSuggestions(suggestions) {
+            const list = $("#suggestions").empty().removeClass("hidden");
+
+            suggestions.forEach(s => {
+                const li = $(`<li class="px-3 py-2 hover:bg-gray-100 cursor-pointer">${s.label}</li>`);
+
+                li.on("click", function () {
+                    $("#Address").val(s.label);
+                    $("#suggestions").addClass("hidden");
+
+                    // ❌ KHÔNG set lat/lon ở đây nữa
+                    // const [lon, lat] = s.coords;
+                    // $("#Latitude").val(lat);
+                    // $("#Longitude").val(lon);
+                });
+
+                list.append(li);
+            });
+        }
+        function getCoordinatesByAddress(callback) {
+            const address = $("#Address").val();
+
+
+            $.ajax({
+                url: "https://nominatim.openstreetmap.org/search",
+                method: "GET",
+                data: {
+                    q: address,
+                    format: "json",
+                    limit: 1
+                },
+                success: function (data) {
+                    if (data && data.length > 0) {
+                        const lat = data[0].lat;
+                        const lon = data[0].lon;
+                        $("#Latitude").val(lat);
+                        $("#Longitude").val(lon);
+
+                        if (typeof callback === "function") callback(lat, lon);
+                    } else {
+                        //Swal.fire({
+                        //    icon: 'error',
+                        //    title: 'Không tìm thấy',
+                        //    text: 'Không tìm thấy tọa độ cho địa chỉ này.'
+                        //});
+                        $("#Latitude").val("");
+                        $("#Longitude").val("");
+                    }
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Không thể kết nối tới máy chủ định vị.'
+                    });
+                    $("#Latitude").val("");
+                    $("#Longitude").val("");
+                }
+            });
+        }
+
+
+        $("#btnUpdateInfo").on("click", function (e) {
+            e.preventDefault();
+
+            const fullName = $("#FullName").val().trim();
+            const phone = $("#Phone").val().trim();
+            const address = $("#Address").val().trim();
+
+            if (!fullName || !phone || !address) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Thiếu thông tin',
+                    text: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và địa chỉ.'
+                });
+                return;
+            }
+
+            $.ajax({
+                url: '/Customers/UpdateInfo',
+                type: 'POST',
+                data: {
+                    FullName: fullName,
+                    Phone: phone,
+                    Address: address
+                },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công',
+                            text: res.message
+                        }).then(() => {
+                            // Gọi click nút xác nhận sau khi hiện thông báo thành công
+                            $("#btnConfirm").click();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Thất bại',
+                            text: res.message
+                        });
+                    }
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Không thể kết nối đến server.'
+                    });
+                }
+            });
+        });
+
+        $("#Address").on("blur", function () {
+            getCoordinatesByAddress();
+            $("#suggestions").addClass("hidden");
+        });
+
+        $("#Address").on("keydown", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();  // Ngăn form submit (nếu có)
+                getCoordinatesByAddress();
+                $("#suggestions").addClass("hidden");
+            }
+        });
+
+        $("#btnCreateAccount").on("click", function () {
+            const fullName = $("#FullName").val().trim();
+            const email = ($("#Email").val() || "").trim();
+            const phone = $("#Phone").val().trim();
+            const address = $("#Address").val().trim();
+
+           
+
+            
+
+            Swal.fire({
+                title: 'Xác nhận tạo tài khoản?',
+                html: `
+            <p>Bạn có muốn tạo tài khoản với thông tin sau?</p>
+            <ul style="text-align: left;">
+                <li><strong>Họ tên:</strong> ${fullName}</li>
+                <li><strong>Họ tên:</strong> ${email}</li>
+                <li><strong>Số điện thoại:</strong> ${phone}</li>
+                <li><strong>Địa chỉ:</strong> ${address}</li>
+            </ul>
+        `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Tạo tài khoản',
+                cancelButtonText: 'Hủy bỏ',
+               
+                
+            }).then((result) => {
+                if (result.isConfirmed) {
+                   
+                    $.ajax({
+                        url: '/Customers/CreateAccount',
+                        type: 'POST',
+                        data: {
+                            FullName: fullName,
+                            Phone: phone,
+                            Address: address,
+                            Email: email
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Thành công', 'Tài khoản đã được tạo với mật khẩu 000000.', 'success');
+                                $("#btnConfirm").click();
+                               
+                            } else {
+                                Swal.fire('Thất bại', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Lỗi', 'Không thể kết nối đến server.', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+    })
+
+    function checkChanges() {
+        const fullName = $("#FullName");
+        const phone = $("#Phone");
+        const address = $("#Address");
+        const btn = $("#btnUpdateInfo");
+
+        const isChanged =
+            fullName.val().trim() !== fullName.data("original").trim() ||
+            phone.val().trim() !== phone.data("original").trim() ||
+            address.val().trim() !== address.data("original").trim();
+
+        if (isChanged) {
+            btn.removeClass("hidden");
+        } else {
+            btn.addClass("hidden");
+        }
+    }
+
+    $("#FullName, #Phone, #Address").on("input", checkChanges);
+</script>
+
